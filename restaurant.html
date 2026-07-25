@@ -800,9 +800,10 @@ function confirmEC(){cfO.classList.add('act');}
 function cancelEC(){cfO.classList.remove('act');}
 function doEC(){cfO.classList.remove('act');endDay();}
 const resetO=document.getElementById('resetOver');
-function confirmReset(){cfO.classList.remove('act');smO.classList.remove('act');resetO.classList.add('act');}
-function cancelReset(){resetO.classList.remove('act');}
+function confirmReset(){resetO&&resetO.classList.add('act');}
+function cancelReset(){resetO&&resetO.classList.remove('act');}
 function doReset(){
+  if(!resetO)return;
   resetO.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
   totalDays=0;totalRevenue=0;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
