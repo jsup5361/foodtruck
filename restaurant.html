@@ -73,6 +73,8 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .stv.cw-steam{border-color:#5a7a99;border-radius:10px 10px 6px 6px;background:linear-gradient(180deg,#fefcf8,#e8f0f8)}
 .stv.active{border-color:#e67e22;background:#fef9f0}
 .stv.done{border-color:#27ae60;background:#f0faf0}
+.stv.placeholder{border-color:#ccc;background:#f8f8f8;opacity:.6;cursor:default;pointer-events:none}
+.stv.placeholder .stv-lb{color:#999}
 .stv-lb{font-size:.7rem;font-weight:700;color:#6b4c32}
 .stv-cw{display:flex;gap:3px}
 .cwb{flex:1;padding:3px 2px;font-size:.55rem;font-weight:600;border:1.5px solid #d0c5b8;border-radius:5px;background:#fefcf8;cursor:pointer;transition:all .12s;color:#3d2b1a}
@@ -423,7 +425,7 @@ let ingredientUses={}; // 总剩余使用次数（做菜消耗这个）
 let farmUses={}; // 农场的剩余使用次数（用于跟踪 farmInventory 何时耗尽）
 let seedSelected=null; // 种子袋中选中的种子
 let lastBizDate=''; // 上次营业的北京时间日期
-const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null},{id:2,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null},{id:3,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
+const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
 const coldBowl={ig:[],sel:false};
 
 // ===== 厨师等级系统 =====
@@ -435,7 +437,7 @@ function getLvNext() { const l=getLv(); return l<10?LV_TH[l]:-1; }
 function getLvProgress() { const l=getLv(), cur=LV_TH[l-1]||0, next=LV_TH[l]||0; const p=next-cur; return p>0?Math.min(100,(totalCompleted-cur)/p*100):100; }
 
 // Load save - enhanced with timestamp
-try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';day=(s.d||0)+1;
+try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';day=totalDays||1;
 // 离线收益计算
 const lastT=s.t||0;const offline=lastT?Math.floor((Date.now()-lastT)/1000):0;
 if(offline>10){
@@ -561,6 +563,7 @@ function startDay(){
     }
   }
   if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
+  totalDays++;day=totalDays;updateDay();
   orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;
   upMoney();renderBowl();
   remain=480;session=true;
@@ -665,7 +668,7 @@ function renderStoves(){
         ${s.st==='done'?`<button class="sb sv" onclick="event.stopPropagation();svSt(${s.id})">🍽️ 出锅</button>`:''}
         ${s.st==='idle'&&s.ig.length>0?`<button class="sb cl" onclick="event.stopPropagation();clSt(${s.id})">🗑️ 清</button>`:''}
       </div></div>`;
-  }).join('');
+  }).join('')+'<div class="stv placeholder"><div class="stv-lb">🔪 菜板</div><div class="sph" style="padding:20px 0;font-size:.65rem">暂未开放</div></div><div class="stv placeholder"><div class="stv-lb">🔥 烤箱</div><div class="sph" style="padding:20px 0;font-size:.65rem">暂未开放</div></div>';
 }
 
 function selSt(id){
@@ -811,7 +814,6 @@ function endDay(){
   orders.forEach(o=>clearInterval(o.tid));
   sBtn.textContent='🔴 打烊了';sBtn.className='hbtn closed';ecBtn.style.display='none';td.textContent='--:--';
   
-  totalDays++;
   const oldLv=getLv(); // 升级前等级
   totalCompleted+=doneToday;
   const newLv=getLv();
@@ -1185,7 +1187,7 @@ function importSave(e){
       if(typeof s.d==='number'&&typeof s.c==='number'){
         totalDays=s.d;totalRevenue=s.r||0;totalCompleted=s.c;
         completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';
-        day=(s.d||0)+1;updateDay();
+        day=totalDays||1;updateDay();
         localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bd:lastBizDate,t:Date.now()}));
         toast('✅','存档已导入！');
         renderIG();renderOrders();renderServe();renderStoves();renderAchv();
