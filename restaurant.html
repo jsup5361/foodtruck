@@ -326,7 +326,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 <div class="tc" id="tc"></div>
 
 <div class="farm-view" id="farmView">
-  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span><button class="db-toggle" id="dbToggle" onclick="toggleDebug()">🔧</button></div>
+  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span><button class="db-toggle" id="dbToggle" onclick="toggleDebug()" style="display:none">🔧</button></div>
   <div class="db-panel" id="dbPanel">
     <span class="lb">⏩ 快进</span>
     <button class="db-btn" onclick="debugFF(1)">1h</button>
@@ -501,6 +501,8 @@ renderOrders();
 renderServe();
 updateDay();
 updateBizBtn();
+// 本地环境显示 debug 按钮
+if(isDebugEnv)document.getElementById('dbToggle').style.display='';
 // 新玩家欢迎
 if(totalDays===0&&totalRevenue===1000)setTimeout(()=>toast('💰','欢迎来到餐车！初始资金 ¥1000，去农场种菜吧！'),800);
 
@@ -904,15 +906,17 @@ function showTip(){
 showTip();
 setInterval(showTip,20000);
 
-// ===== 调试模式 =====
+// ===== 调试模式（本地环境可用，push 版本隐藏）=====
+const isDebugEnv = location.hostname==='localhost'||location.protocol==='file:'||location.hostname==='127.0.0.1';
 let debugMode=false;
 function toggleDebug(){
+  if(!isDebugEnv)return;
   debugMode=!debugMode;
   document.getElementById('dbToggle').classList.toggle('on',debugMode);
   document.getElementById('dbPanel').classList.toggle('show',debugMode);
 }
 function debugFF(hours){
-  if(!debugMode)return;
+  if(!debugMode||!isDebugEnv)return;
   const ms=hours*3600*1000;
   let count=0;
   farmPlots.forEach(p=>{
@@ -922,7 +926,7 @@ function debugFF(hours){
   toast('⏩',`快进 ${hours} 小时，影响 ${count} 块农田`);
 }
 function debugRipe(){
-  if(!debugMode)return;
+  if(!debugMode||!isDebugEnv)return;
   let count=0;
   farmPlots.forEach(p=>{
     if(p.crop&&p.plantedAt){p.plantedAt=1;count++;}
