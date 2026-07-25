@@ -366,7 +366,18 @@ function getLvNext() { const l=getLv(); return l<10?LV_TH[l]:-1; }
 function getLvProgress() { const l=getLv(), cur=LV_TH[l-1]||0, next=LV_TH[l]||0; const p=next-cur; return p>0?Math.min(100,(totalCompleted-cur)/p*100):100; }
 
 // Load save - enhanced with timestamp
-try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;day=(s.d||0)+1;updateDay();renderAchv();renderFarmInv();}}catch(e){}if(!farmSeeds['萝卜'])farmSeeds['萝卜']=5;
+try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;day=(s.d||0)+1;
+// 离线收益计算
+const lastT=s.t||0;const offline=lastT?Math.floor((Date.now()-lastT)/1000):0;
+if(offline>10){
+  let mature=0;
+  farmPlots.forEach(p=>{
+    if(p.crop&&p.plantedAt){p.plantedAt+=offline*1000;if(Date.now()-p.plantedAt>=p.growTime)mature++;}
+  });
+  if(mature>0)setTimeout(()=>toast('🎉',`欢迎回来！离开了 ${Math.floor(offline/60)} 分钟，${mature} 颗作物已成熟！`),500);
+  else if(offline>60)setTimeout(()=>toast('👋',`欢迎回来！离开了 ${Math.floor(offline/60)} 分钟`),500);
+}
+updateDay();renderAchv();renderFarmInv();}}catch(e){}if(!farmSeeds['萝卜'])farmSeeds['萝卜']=5;
 // Auto-save every 10s
 setInterval(()=>{
   if(!session&&totalDays===0)return;
@@ -799,7 +810,7 @@ function unlockPlot(idx){
   if(idx<unlockedPlots)return;
   const lv=getLv();const maxByLv=Math.min(25,4+lv*2);
   if(idx>=maxByLv){toast('🔒',`Lv.${Math.ceil((idx-3)/2)} 解锁更多土地`);return;}
-  const cost=10+Math.floor(idx/5)*5;
+  const cost=15+Math.floor(idx/5)*30+(idx%5)*5;
   if(revenue<cost){toast('😅',`开垦需要 ¥${cost}`);return;}
   revenue-=cost;unlockedPlots++;upMoney();
   addLog('🔓',`开垦第${unlockedPlots}块地`);
@@ -832,7 +843,7 @@ function renderFarm(){
   const maxPlots=Math.min(25,unlockedPlots);
   document.getElementById('farmGrid').innerHTML=farmPlots.map((p,i)=>{
     if(i>=maxPlots){
-      const cost=10+Math.floor(i/5)*5;
+      const cost=15+Math.floor(i/5)*30+(i%5)*5;
       return '<div class="plot" style="background:#d8cdc0;cursor:pointer" onclick="unlockPlot('+i+')" title="开垦 ¥'+cost+'">🔒<span class="lock">¥'+cost+'</span></div>';
     }
     if(!p.crop)return '<div class="plot" onclick="plantCrop('+i+')" title="点击播种">🌱</div>';
