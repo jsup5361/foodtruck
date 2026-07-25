@@ -6,6 +6,7 @@
 <title>厨娘朱莉的餐车</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+html{font-size:17px}
 body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6ed;min-height:100vh;padding:14px;display:flex;flex-direction:column;align-items:center}
 .header{width:100%;max-width:1200px;background:linear-gradient(135deg,#c0392b,#962d22);border-radius:16px 16px 0 0;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 3px 10px rgba(180,40,30,.2);flex-wrap:wrap;gap:6px}
 .hl{display:flex;align-items:center;gap:10px}
@@ -252,7 +253,29 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .farm-inv{display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:#faf5ee;border-radius:10px;min-height:40px;align-items:center}
 .farm-inv .fi{display:inline-flex;align-items:center;gap:2px;padding:3px 8px;background:#fff;border:1px solid #d4edda;border-radius:6px;font-size:.7rem;font-weight:600;color:#155724}
 .farm-inv .fi .cnt{color:#27ae60;font-size:.6rem}
+.farm-inv .sell-btn{font-size:.5rem;padding:1px 5px;border-radius:4px;border:1px solid #d4a373;background:#fff;color:#d4a373;cursor:pointer;margin-left:3px;transition:all .12s;line-height:1.4}
+.farm-inv .sell-btn:hover{background:#d4a373;color:#fff}
 .farm-badge{font-size:.5rem;color:#27ae60;margin-left:2px}
+/* 种子袋 */
+.seed-bag{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;background:#faf5ee;border-radius:8px;min-height:32px;align-items:center}
+.seed-item{display:inline-flex;align-items:center;gap:3px;padding:4px 8px;background:#fff;border:1.5px solid #e0d5c8;border-radius:8px;cursor:pointer;font-size:.7rem;font-weight:600;transition:all .12s;color:#3d2b1a}
+.seed-item:hover{border-color:#d4a373;transform:translateY(-1px)}
+.seed-item.sel{border-color:#e67e22;background:#fef6ed;box-shadow:0 0 0 2px rgba(230,126,34,.2)}
+.seed-item .e{font-size:1rem}
+.seed-item .name{font-size:.65rem}
+.seed-item .cnt{color:#27ae60;font-size:.6rem}
+.seed-item .sel-mark{color:#e67e22;font-size:.6rem;font-weight:700}
+.plot.ready{border-color:#e67e22;border-style:dashed;background:#fef9f0}
+/* 调试模式 */
+.db-toggle{font-size:.65rem;padding:2px 8px;border-radius:10px;border:1.5px solid #aaa;cursor:pointer;background:transparent;color:#888;margin-left:auto;transition:all .2s;user-select:none}
+.db-toggle.on{background:#e67e22;border-color:#e67e22;color:#fff}
+.db-panel{display:none;gap:6px;padding:6px 10px;background:#fff8f0;border:1.5px dashed #d4a373;border-radius:8px;flex-wrap:wrap;align-items:center}
+.db-panel.show{display:flex}
+.db-panel .lb{font-size:.65rem;font-weight:600;color:#6b4c32;margin-right:4px}
+.db-btn{padding:3px 10px;font-size:.65rem;font-weight:600;border:1.5px solid #d4a373;border-radius:6px;background:#fff;cursor:pointer;transition:all .12s;color:#3d2b1a}
+.db-btn:hover{background:#d4a373;color:#fff}
+.db-btn.danger{border-color:#e74c3c;color:#e74c3c}
+.db-btn.danger:hover{background:#e74c3c;color:#fff}
 @media(max-width:600px){
 .farm-grid{max-width:100%;gap:6px}
 .plot{min-height:50px;font-size:1.4rem}
@@ -301,11 +324,21 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 <div class="tab-bar"><button class="tab act" id="tabKitchen" onclick="switchTab('kitchen')">🚚 餐车</button><button class="tab" id="tabFarm" onclick="switchTab('farm')">🌾 农场</button></div>
 
 <div class="farm-view" id="farmView">
-  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span></div>
+  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span><button class="db-toggle" id="dbToggle" onclick="toggleDebug()">🔧</button></div>
+  <div class="db-panel" id="dbPanel">
+    <span class="lb">⏩ 快进</span>
+    <button class="db-btn" onclick="debugFF(1)">1h</button>
+    <button class="db-btn" onclick="debugFF(4)">4h</button>
+    <button class="db-btn" onclick="debugFF(8)">8h</button>
+    <button class="db-btn" onclick="debugFF(24)">24h</button>
+    <button class="db-btn danger" onclick="debugRipe()">🌾 全部成熟</button>
+  </div>
   <div class="farm-grid" id="farmGrid"></div>
-  <div class="pt" style="font-size:.8rem;margin:0">🏪 种子商店</div>
+  <div class="pt" style="font-size:.75rem;margin:6px 0 4px">🎒 种子袋</div>
+  <div class="seed-bag" id="seedBag"><span style="color:#b8a48c;font-size:.7rem">没有种子，去商店购买</span></div>
+  <div class="pt" style="font-size:.8rem;margin:4px 0">🏪 种子商店</div>
   <div class="farm-shop" id="farmShop"></div>
-  <div class="pt" style="font-size:.8rem;margin:0">📦 农仓库存</div>
+  <div class="pt" style="font-size:.8rem;margin:0">📦 农仓库存 <button class="sell-all-btn" id="sellAllBtn" onclick="sellAllCrops()" style="display:none;font-size:.6rem;padding:1px 6px;border-radius:4px;border:1px solid #d4a373;background:#fff;color:#d4a373;cursor:pointer">💰 全部卖出</button> <button class="harvest-all-btn" id="harvestAllBtn" onclick="harvestAll()" style="font-size:.6rem;padding:1px 6px;border-radius:4px;border:1px solid #27ae60;background:#fff;color:#27ae60;cursor:pointer">🌾 一键收获</button></div>
   <div class="farm-inv" id="farmInv"><span style="color:#b8a48c;font-size:.7rem">收获的食材会出现在这里</span></div>
 </div>
 
@@ -325,28 +358,51 @@ const ALL_E = {
 };
 const CW = ["炒锅","煎锅","蒸锅"];
 const MTH = ["炒","炸","爆","熘","炖","煮"];
+// 食材虚空购买价格表（每5次使用）
+const IG_PRICE = {
+  '盐':5,'糖':5,'酱油':5,'醋':5,'料酒':5,
+  '豆瓣酱':5,'蚝油':5,'番茄酱':5,'胡椒粉':5,'鸡精':5,'淀粉':5,
+  '辣椒':5,'花椒':5,'蒜':5,'姜':5,'葱':5,
+  '鸡蛋':8,'豆腐':8,'豆芽':8,'花生':8,'紫菜':8,
+  '菠菜':8,'生菜':8,'苦瓜':8,'韭菜':8,'香菇':8,
+  '番茄':12,'土豆':12,'白菜':12,'青椒':12,'洋葱':12,'茄子':12,
+  '黄瓜':12,'胡萝卜':12,'白萝卜':12,'冬瓜':12,'南瓜':12,
+  '木耳':12,'西兰花':12,'蒜苔':12,'莲藕':12,'豆角':12,'山药':12,
+  '鸡翅':12,'鸡胸':12,
+  '猪肉':20,'鸡腿':20,'虾仁':20,'鱼肉':20,
+  '牛肉':30,'排骨':30,'五花肉':30,'羊肉':30,
+  '面条':5,'米饭':5,
+};
 
 // ===== State =====
 let orders=[], served=[], selOrder=null, completed=0, failed=0, revenue=0, session=false;
 let bizTimer=null, remain=0, doneToday=0, nextId=1, selStove=null;
-let day=1, totalDays=0, totalRevenue=0, totalCompleted=0;
+let day=1, totalDays=0, totalRevenue=1000, totalCompleted=0;
 let completedDishes=[], unlockedAchv={};
 let stock={};
 // ===== 农场系统 =====
+// 食材等级倍率（农仓食材每单位对应使用次数）
+const TIER_MULT = [0, 3, 4, 5, 6]; // tier 1→×3, 2→×4, 3→×5, 4→×6
+// 收获时间分级: 4h / 8h / 12h / 24h
+// tier 按食材在菜谱中最高难度星数划定
 const CROPS_DATA = [
-  {id:'萝卜',emoji:'🥕',time:150,cost:3,yield:3,unlock:1},
-  {id:'番茄',emoji:'🍅',time:180,cost:5,yield:3,unlock:1},
-  {id:'青椒',emoji:'🌶',time:150,cost:4,yield:2,unlock:1},
-  {id:'白菜',emoji:'🥬',time:120,cost:3,yield:3,unlock:1},
-  {id:'黄瓜',emoji:'🥒',time:150,cost:4,yield:3,unlock:1},
-  {id:'韭菜',emoji:'🌿',time:120,cost:3,yield:3,unlock:1},
-  {id:'土豆',emoji:'🥔',time:300,cost:6,yield:2,unlock:3},
-  {id:'胡萝卜',emoji:'🥕',time:180,cost:4,yield:3,unlock:3},
-  {id:'洋葱',emoji:'🧅',time:240,cost:5,yield:2,unlock:3},
-  {id:'茄子',emoji:'🍆',time:240,cost:5,yield:2,unlock:3},
-  {id:'南瓜',emoji:'🎃',time:360,cost:8,yield:2,unlock:5},
-  {id:'玉米',emoji:'🌽',time:300,cost:6,yield:3,unlock:5},
-  {id:'草莓',emoji:'🍓',time:240,cost:7,yield:2,unlock:7},
+  // Tier 1 (4h) — 出现在 s:2 菜谱的基础食材
+  {id:'韭菜',emoji:'🌿',tier:1,growHours:4,yieldMin:3,yieldMax:6,cost:3,unlock:1},
+  {id:'白萝卜',emoji:'🥕',tier:1,growHours:4,yieldMin:3,yieldMax:6,cost:3,unlock:1},
+  {id:'玉米',emoji:'🌽',tier:1,growHours:4,yieldMin:3,yieldMax:6,cost:3,unlock:1},
+  // Tier 2 (8h) — 出现在 s:4 菜谱
+  {id:'白菜',emoji:'🥬',tier:2,growHours:8,yieldMin:3,yieldMax:5,cost:4,unlock:1},
+  {id:'黄瓜',emoji:'🥒',tier:2,growHours:8,yieldMin:3,yieldMax:5,cost:4,unlock:1},
+  {id:'茄子',emoji:'🍆',tier:2,growHours:8,yieldMin:2,yieldMax:4,cost:5,unlock:3},
+  {id:'南瓜',emoji:'🎃',tier:2,growHours:8,yieldMin:2,yieldMax:4,cost:6,unlock:3},
+  // Tier 3 (12h) — 出现在 s:6 菜谱
+  {id:'青椒',emoji:'🌶',tier:3,growHours:12,yieldMin:2,yieldMax:4,cost:5,unlock:3},
+  {id:'胡萝卜',emoji:'🥕',tier:3,growHours:12,yieldMin:2,yieldMax:4,cost:5,unlock:3},
+  {id:'洋葱',emoji:'🧅',tier:3,growHours:12,yieldMin:2,yieldMax:3,cost:6,unlock:5},
+  {id:'草莓',emoji:'🍓',tier:3,growHours:12,yieldMin:2,yieldMax:3,cost:8,unlock:5},
+  // Tier 4 (24h) — 出现在 s:8 菜谱的顶级食材
+  {id:'番茄',emoji:'🍅',tier:4,growHours:24,yieldMin:1,yieldMax:3,cost:6,unlock:5},
+  {id:'土豆',emoji:'🥔',tier:4,growHours:24,yieldMin:1,yieldMax:3,cost:7,unlock:7},
 ];
 let farmInventory={};
 let farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));
@@ -354,6 +410,11 @@ let farmSeeds={};
 let unlockedPlots=6;
 let activeTab='kitchen';
 let farmTimerId=null;
+// 食材使用次数系统：农仓食材每单位 ×N 次，虚空购买每单位 1 次
+let ingredientUses={}; // 总剩余使用次数（做菜消耗这个）
+let farmUses={}; // 农场的剩余使用次数（用于跟踪 farmInventory 何时耗尽）
+let seedSelected=null; // 种子袋中选中的种子
+let lastBizDate=''; // 上次营业的北京时间日期
 const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null},{id:2,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null},{id:3,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
 const coldBowl={ig:[],sel:false};
 
@@ -366,7 +427,7 @@ function getLvNext() { const l=getLv(); return l<10?LV_TH[l]:-1; }
 function getLvProgress() { const l=getLv(), cur=LV_TH[l-1]||0, next=LV_TH[l]||0; const p=next-cur; return p>0?Math.min(100,(totalCompleted-cur)/p*100):100; }
 
 // Load save - enhanced with timestamp
-try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;day=(s.d||0)+1;
+try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';day=(s.d||0)+1;
 // 离线收益计算
 const lastT=s.t||0;const offline=lastT?Math.floor((Date.now()-lastT)/1000):0;
 if(offline>10){
@@ -374,14 +435,14 @@ if(offline>10){
   farmPlots.forEach(p=>{
     if(p.crop&&p.plantedAt){p.plantedAt+=offline*1000;if(Date.now()-p.plantedAt>=p.growTime)mature++;}
   });
-  if(mature>0)setTimeout(()=>toast('🎉',`欢迎回来！离开了 ${Math.floor(offline/60)} 分钟，${mature} 颗作物已成熟！`),500);
-  else if(offline>60)setTimeout(()=>toast('👋',`欢迎回来！离开了 ${Math.floor(offline/60)} 分钟`),500);
+  if(mature>0)setTimeout(()=>toast('🎉',`欢迎回来！离开了 ${(offline/3600).toFixed(1)} 小时，${mature} 颗作物已成熟！`),500);
+  else if(offline>3600)setTimeout(()=>toast('👋',`欢迎回来！离开了 ${(offline/3600).toFixed(1)} 小时`),500);
 }
-updateDay();renderAchv();renderFarmInv();}}catch(e){}if(!farmSeeds['萝卜'])farmSeeds['萝卜']=5;
+updateDay();renderAchv();renderFarmInv();}}catch(e){}if(!farmSeeds['白萝卜'])farmSeeds['白萝卜']=5;
 // Auto-save every 10s
-setInterval(()=>{
+setInterval(()=>{updateBizBtn();
   if(!session&&totalDays===0)return;
-  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,t:Date.now()};
+  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bd:lastBizDate,t:Date.now()};
   try{localStorage.setItem('foodtruck',JSON.stringify(data));}catch(e){}
 },10000);
 
@@ -429,14 +490,22 @@ renderStoves();
 renderOrders();
 renderServe();
 updateDay();
+updateBizBtn();
+// 新玩家欢迎
+if(totalDays===0&&totalRevenue===1000)setTimeout(()=>toast('💰','欢迎来到餐车！初始资金 ¥1000，去农场种菜吧！'),800);
 
 function renderIG(){
   const maxS=getLvMaxStars();
   const unlocked=R.filter(r=>r.s<=maxS);
   const ui=new Set,us=new Set;
   unlocked.forEach(r=>{r.i.forEach(x=>ui.add(x));r.se.forEach(x=>us.add(x));});
-  // 确保新解锁的食材有初始库存
-  [...ui,...us].forEach(x=>{if(!(x in stock))stock[x]=8;});
+  // 确保新解锁的食材有初始 10 次使用（含值为0的旧存档）
+  [...ui,...us].forEach(x=>{
+    if(!(x in ingredientUses)||ingredientUses[x]<=0){
+      ingredientUses[x]=10;
+      stock[x]=10;
+    }
+  });
   const seas=["盐","糖","酱油","醋","料酒","豆瓣酱","蚝油","番茄酱","胡椒粉","鸡精","淀粉"].filter(x=>us.has(x));
   const herbs=["辣椒","花椒","蒜","姜","葱"].filter(x=>us.has(x));
   const meats=["猪肉","牛肉","鸡腿","鸡翅","鸡胸","排骨","五花肉","羊肉"].filter(x=>ui.has(x));
@@ -455,11 +524,11 @@ function renderIG(){
 }
 
 function mkItem(n){
-  const stk=stock[n]||0;
-  const empty=stk<=0;
-  const farmQty=farmInventory[n]||0;
-  return `<div class="igb ${empty?'out':''}" onclick="addIng('${n}')" title="${empty?'点击补货':n+' 剩余'+stk}">
-    <span class="e">${ALL_E[n]||'🥬'}</span>${n}${farmQty>0?`<span class="farm-badge">🌾${farmQty}</span>`:''}${empty?'<br><span style="font-size:.5rem;color:#e74c3c">缺货</span>':''}
+  const uses=ingredientUses[n]||0;
+  const empty=uses<=0;
+  const hasFarm=(farmUses[n]||0)>0;
+  return `<div class="igb ${empty?'out':''}" onclick="addIng('${n}')" title="${empty?'¥'+(IG_PRICE[n]||5)+'买5次':n+' 可用'+uses+'次（¥'+(IG_PRICE[n]||5)+'/5次）'}">
+    <span class="e">${ALL_E[n]||'🥬'}</span>${n}${hasFarm?`<span class="farm-badge">🌾</span>`:''}${empty?'<br><span style="font-size:.5rem;color:#e74c3c">¥'+(IG_PRICE[n]||5)+'</span>':''}
   </div>`;
 }
 
@@ -472,6 +541,16 @@ function updateDay(){
 // ===== Start Day =====
 function startDay(){
   if(session)return;
+  // 检查北京时间是否到12pm
+  if(lastBizDate){
+    const now=new Date();
+    const bjDate=now.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'});
+    const bjHour=parseInt(now.toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour:'numeric',hour12:false}));
+    if(bjDate===lastBizDate||bjHour<12){
+      toast('🔒','北京时间12pm后才能再次开店');
+      return;
+    }
+  }
   if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
   orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;
   upMoney();renderBowl();
@@ -484,6 +563,16 @@ function startDay(){
   setTimeout(()=>spawnB(),600);
 }
 function upH(){const m=Math.floor(Math.max(0,remain)/60),s=Math.max(0,remain)%60;td.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;td.className='timer'+(remain<=60?' warn':'');}
+function updateBizBtn(){
+  if(session)return;
+  const now=new Date();
+  const bjDate=now.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'});
+  const bjHour=parseInt(now.toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour:'numeric',hour12:false}));
+  const locked=lastBizDate&&(bjDate===lastBizDate||bjHour<12);
+  sBtn.disabled=locked;
+  sBtn.textContent=locked?'🔒 休息中':'🚚 开店';
+  sBtn.className='hbtn'+(locked?' closed':'');
+}
 
 // ===== Orders =====
 function spawnB(){if(!session||orders.length>=4)return;sndDing();spawnO();}
@@ -509,7 +598,7 @@ function serveO(id){
   served.splice(idx,1);
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
   addLog('✅',`上菜完成「${o.dish}」¥${o.price}`);
-  completed++;doneToday++;revenue+=o.price;upMoney();
+  completed++;doneToday++;revenue+=o.price;totalRevenue+=o.price;upMoney();
   if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
   checkAchv();
   clearInterval(o.tid);
@@ -570,41 +659,53 @@ function setMt(id,m){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')retu
 function clSt(id){const s=stoves.find(x=>x.id===id);if(!s)return;s.ig=[];renderStoves();}
 
 function addIng(name){
-  if(!session){toast('🚫','还没开工！');return;}
-  // 优先消耗农仓库存
-  if((farmInventory[name]||0)>0){
-    farmInventory[name]--;
-    addLog('🌾',`从农仓取 ${name}`);
-    // 凉拌碗模式
-    if(coldBowl.sel){coldBowl.ig.push(name);addLog(ALL_E[name]||'🥬',`放${name}进凉拌碗`);renderBowl();renderIG();return;}
-    const s=stoves.find(x=>x.id===selStove);
-    if(!s){toast('👆','请先点击一个炉灶！');return;}
-    if(s.st!=='idle'){toast('🚫','这个灶正在工作中！');return;}
-    if(!s.cw){toast('🍳','请先选炊具！');return;}
-    s.ig.push(name);addLog(ALL_E[name]||'🥬',`放${name}进灶${s.id}`);renderStoves();renderIG();renderFarmInv();
+  // 开工前点击食材=补货，每次扣钱加5次使用
+  if(!session){
+    const cost=IG_PRICE[name]||5;
+    if(totalRevenue<cost){toast('😅','金币不够！');return;}
+    totalRevenue-=cost;
+    ingredientUses[name]=(ingredientUses[name]||0)+5;
+    stock[name]=(stock[name]||0)+5;
+    upMoney();renderIG();
+    addLog('🛒',`花¥${cost}购买${name}（5次使用）`);
     return;
   }
-  // 库存检查
-  if(!(name in stock)||stock[name]<=0){
-    const cost=['猪肉','牛肉','鸡腿','鸡翅','鸡胸','排骨','五花肉','羊肉','鱼肉','虾仁'].includes(name)?5:3;
-    if(totalRevenue<cost){toast('😅','金币不够补货！');return;}
-    totalRevenue-=cost;stock[name]=8;upMoney();addLog('🛒',`花¥${cost}补货${name}`);
-    renderIG();return;
+  // === 食材使用次数系统 ===
+  // 总可用次数不足 → 按食材价格虚空购买（每5次使用）
+  if((ingredientUses[name]||0)<=0){
+    const cost=IG_PRICE[name]||5;
+    if(totalRevenue<cost){toast('😅','金币不够！');return;}
+    totalRevenue-=cost;
+    ingredientUses[name]=(ingredientUses[name]||0)+5;
+    stock[name]=(stock[name]||0)+5;
+    upMoney();renderIG();
+    addLog('🛒',`花¥${cost}购买${name}（5次使用）`);
+    // 补货后继续消耗 1 次
   }
-  stock[name]--;
+  // 消耗 1 次使用次数
+  ingredientUses[name]--;
+  // 优先消耗农场份额，同步 farmInventory
+  if((farmUses[name]||0)>0){
+    farmUses[name]--;
+    const c=CROPS_DATA.find(x=>x.id===name);
+    const mult=c?TIER_MULT[c.tier]||3:3;
+    farmInventory[name]=Math.ceil((farmUses[name]||0)/mult);
+    if(farmInventory[name]<=0){delete farmInventory[name];delete farmUses[name];}
+    addLog('🌾',`从农仓取 ${name}（农仓剩余 ${farmUses[name]||0} 次）`);
+  }else if((stock[name]||0)>0){
+    // 同步扣减虚空库存（仅用于显示）
+    stock[name]--;
+    if(stock[name]<=0)delete stock[name];
+  }
   // 凉拌碗模式
-  if(coldBowl.sel){
-    coldBowl.ig.push(name);
-    addLog(ALL_E[name]||'🥬',`放${name}进凉拌碗`);
-    renderBowl();return;
-  }
+  if(coldBowl.sel){coldBowl.ig.push(name);addLog(ALL_E[name]||'🥬',`放${name}进凉拌碗`);renderBowl();renderIG();renderFarmInv();return;}
   const s=stoves.find(x=>x.id===selStove);
   if(!s){toast('👆','请先点击一个炉灶！');return;}
   if(s.st!=='idle'){toast('🚫','这个灶正在工作中！');return;}
   if(!s.cw){toast('🍳','请先选炊具！');return;}
   s.ig.push(name);
   addLog(ALL_E[name]||'🥬',`放${name}进灶${s.id}`);
-  renderStoves();
+  renderStoves();renderIG();renderFarmInv();
 }
 
 function startCk(id){
@@ -633,6 +734,7 @@ function svSt(id){
   served.push(dishName);
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting')o.st='cooking';});
   s.ig=[];s.dish=null;s.st='idle';s.rem=0;s.tot=0;
+  selStove=null;
   renderStoves();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='cooking')o.st='done';});
   renderOrders();
@@ -660,11 +762,11 @@ function coldMix(){
   addLog('🥗',`凉拌「${match.n}」完成`);
   served.push(match.n);
   orders.forEach(o=>{if(o.dish===match.n&&o.st==='waiting')o.st='cooking';});
-  coldBowl.ig=[];renderBowl();renderServe();renderOrders();
+  coldBowl.ig=[];coldBowl.sel=false;renderBowl();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===match.n&&o.st==='cooking')o.st='done';});
   renderOrders();
 }
-function upMoney(){moneyD.textContent=`💰 ¥${revenue}`;}
+function upMoney(){moneyD.textContent=`💰 ¥${totalRevenue}`;}
 
 // ===== Confirm/End =====
 function confirmEC(){cfO.classList.add('act');}
@@ -677,27 +779,29 @@ function doReset(){
   resetO.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
   totalDays=0;totalRevenue=0;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
-  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'萝卜':5};unlockedPlots=6;
+  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};
   upMoney();updateDay();renderOrders();renderServe();renderStoves();renderAchv();renderIG();
   toast('🗑️','存档已重置');
 }
 
 function endDay(){
   session=false;
+  lastBizDate=new Date().toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'});
+  updateBizBtn();
   if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
   stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;});
   orders.forEach(o=>clearInterval(o.tid));
   sBtn.textContent='🔴 打烊了';sBtn.className='hbtn closed';ecBtn.style.display='none';td.textContent='--:--';
   
-  totalDays++;totalRevenue+=revenue;
+  totalDays++;
   const oldLv=getLv(); // 升级前等级
   totalCompleted+=doneToday;
   const newLv=getLv();
   if(newLv>oldLv){toast('🎉',`升级啦！Lv.${newLv} ${LV_NAMES[newLv-1]}！新菜品解锁了！`);renderIG();}
   addLog('📊',`今日营收¥${revenue}，共${doneToday}单`);
   // Save
-  try{localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,t:Date.now()}));}catch(e){}
-  
+  try{localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bd:lastBizDate,t:Date.now()}));}catch(e){}
+
   const total=doneToday+failed;
   const rate=total>0?(doneToday/total)*100:0;
   document.getElementById('smDay').textContent=day;
@@ -780,6 +884,33 @@ function showTip(){
 showTip();
 setInterval(showTip,20000);
 
+// ===== 调试模式 =====
+let debugMode=false;
+function toggleDebug(){
+  debugMode=!debugMode;
+  document.getElementById('dbToggle').classList.toggle('on',debugMode);
+  document.getElementById('dbPanel').classList.toggle('show',debugMode);
+}
+function debugFF(hours){
+  if(!debugMode)return;
+  const ms=hours*3600*1000;
+  let count=0;
+  farmPlots.forEach(p=>{
+    if(p.crop&&p.plantedAt){p.plantedAt-=ms;count++;}
+  });
+  renderFarm();renderFarmInv();
+  toast('⏩',`快进 ${hours} 小时，影响 ${count} 块农田`);
+}
+function debugRipe(){
+  if(!debugMode)return;
+  let count=0;
+  farmPlots.forEach(p=>{
+    if(p.crop&&p.plantedAt){p.plantedAt=1;count++;}
+  });
+  renderFarm();renderFarmInv();
+  toast('🌾',`${count} 块农田已全部成熟！`);
+}
+
 // ===== 农场系统 =====
 function switchTab(tab){
   activeTab=tab;
@@ -787,56 +918,103 @@ function switchTab(tab){
   document.getElementById('tabFarm').className='tab'+(tab==='farm'?' act':'');
   document.querySelector('.game-grid').style.display=tab==='kitchen'?'grid':'none';
   document.getElementById('farmView').className='farm-view'+(tab==='farm'?' show':'');
-  if(tab==='farm'){renderFarm();startFarmTimer();}else{stopFarmTimer();}
+  if(tab==='farm'){renderFarm();startFarmTimer();}else{stopFarmTimer();deselectSeed();}
 }
 function startFarmTimer(){
   if(farmTimerId)return;
-  farmTimerId=setInterval(()=>{renderFarm();autoFarmGold();},1000);
+  farmTimerId=setInterval(()=>{renderFarm();},1000);
 }
 function stopFarmTimer(){if(farmTimerId){clearInterval(farmTimerId);farmTimerId=null;}}
-function autoFarmGold(){
-  if(totalDays<1)return;
-  const avg=Math.round(totalRevenue/totalDays/480);
-  if(avg>0){revenue+=avg;upMoney();document.getElementById('farmMoney').textContent='¥'+revenue;}
-}
 function buySeed(cropId){
   const c=CROPS_DATA.find(x=>x.id===cropId);if(!c)return;
   const lv=getLv();if(lv<c.unlock){toast('🔒',`Lv.${c.unlock} 解锁`);return;}
-  if(revenue<c.cost){toast('😅','金币不够！');return;}
-  revenue-=c.cost;farmSeeds[cropId]=(farmSeeds[cropId]||0)+1;
-  upMoney();renderFarm();addLog('🌱',`购买${c.emoji}种子`);
+  // 默认购买数量 = 已解锁的空地数
+  const emptyPlots=unlockedPlots-farmPlots.slice(0,unlockedPlots).filter(p=>p.crop).length;
+  const maxBuy=Math.floor(totalRevenue/c.cost);
+  const suggested=Math.min(emptyPlots||1,Math.max(1,maxBuy));
+  const qty=prompt(`购买几颗 ${c.emoji}${cropId} 种子？（¥${c.cost}/颗）`,suggested);
+  if(qty===null)return;
+  const n=parseInt(qty);
+  if(isNaN(n)||n<1){toast('😅','请输入有效数量');return;}
+  const cost=n*c.cost;
+  if(totalRevenue<cost){toast('😅',`需要 ¥${cost}，金币不够！`);return;}
+  totalRevenue-=cost;farmSeeds[cropId]=(farmSeeds[cropId]||0)+n;
+  upMoney();renderFarm();addLog('🌱',`购买${c.emoji}x${n}种子，花¥${cost}`);
 }
 function unlockPlot(idx){
   if(idx<unlockedPlots)return;
   const lv=getLv();const maxByLv=Math.min(25,4+lv*2);
   if(idx>=maxByLv){toast('🔒',`Lv.${Math.ceil((idx-3)/2)} 解锁更多土地`);return;}
   const cost=15+Math.floor(idx/5)*30+(idx%5)*5;
-  if(revenue<cost){toast('😅',`开垦需要 ¥${cost}`);return;}
-  revenue-=cost;unlockedPlots++;upMoney();
+  if(totalRevenue<cost){toast('😅',`开垦需要 ¥${cost}`);return;}
+  totalRevenue-=cost;unlockedPlots++;upMoney();
   addLog('🔓',`开垦第${unlockedPlots}块地`);
   renderFarm();
 }
+function selectSeed(id){
+  if(seedSelected===id){seedSelected=null;renderFarm();return;}
+  const c=CROPS_DATA.find(x=>x.id===id);
+  if(!c||!(farmSeeds[id]||0))return;
+  const lv=getLv();if(lv<c.unlock){toast('🔒',`Lv.${c.unlock} 解锁`);return;}
+  seedSelected=id;
+  renderFarm();
+  addLog('🌱',`选中种子${c.emoji}${id}`);
+}
+function deselectSeed(){seedSelected=null;renderFarm();}
 function plantCrop(plotIdx){
   const p=farmPlots[plotIdx];if(!p||p.crop)return;
-  const avail=Object.keys(farmSeeds).filter(s=>farmSeeds[s]>0);
-  if(!avail.length){toast('🌱','没有种子！去商店购买');return;}
-  const seedId=avail[0];
-  farmSeeds[seedId]--;if(farmSeeds[seedId]<=0)delete farmSeeds[seedId];
-  p.crop=seedId;p.plantedAt=Date.now();p.growTime=CROPS_DATA.find(x=>x.id===seedId).time*1000;
-  addLog('🌱',`种植${CROPS_DATA.find(x=>x.id===seedId).emoji}`);
+  if(!seedSelected||!(farmSeeds[seedSelected]||0)){toast('🌱','请先从种子袋选择种子');return;}
+  const c=CROPS_DATA.find(x=>x.id===seedSelected);
+  if(!c)return;
+  const seedId=seedSelected; // 保存种子ID（deselectSeed 会清空 seedSelected）
+  farmSeeds[seedId]--;if(farmSeeds[seedId]<=0){delete farmSeeds[seedId];deselectSeed();}
+  p.crop=seedId;p.plantedAt=Date.now();p.growTime=c.growHours*3600*1000;
+  addLog('🌱',`种植${c.emoji}（${c.growHours}h 后成熟）`);
   renderFarm();
 }
 function harvestCrop(plotIdx){
   const p=farmPlots[plotIdx];if(!p||!p.crop)return;
   if(Date.now()-p.plantedAt<p.growTime){toast('⏳','还没成熟！');return;}
   const c=CROPS_DATA.find(x=>x.id===p.crop);
-  farmInventory[c.id]=(farmInventory[c.id]||0)+c.yield;
-  addLog('🌾',`收获${c.emoji}x${c.yield}`);
+  // 浮动产量：yieldMin ~ yieldMax
+  const qty=c.yieldMin+Math.floor(Math.random()*(c.yieldMax-c.yieldMin+1));
+  // 食材使用次数：农仓每单位 × tier 倍率
+  const mult=TIER_MULT[c.tier]||3;
+  const totalUses=qty*mult;
+  farmInventory[c.id]=(farmInventory[c.id]||0)+qty;
+  farmUses[c.id]=(farmUses[c.id]||0)+totalUses;
+  ingredientUses[c.id]=(ingredientUses[c.id]||0)+totalUses;
+  addLog('🌾',`收获${c.emoji}x${qty}（农仓+${qty}，可用${totalUses}次）`);
+  sndCoin();
   p.crop=null;p.plantedAt=null;p.growTime=0;
   renderFarm();renderFarmInv();renderIG();
+  return qty;
+}
+function harvestAll(){
+  let total=0,count=0;
+  farmPlots.forEach((p,i)=>{
+    if(p.crop&&p.plantedAt&&Date.now()-p.plantedAt>=p.growTime){
+      const c=CROPS_DATA.find(x=>x.id===p.crop);
+      if(!c)return;
+      const qty=c.yieldMin+Math.floor(Math.random()*(c.yieldMax-c.yieldMin+1));
+      const mult=TIER_MULT[c.tier]||3;
+      const totalUses=qty*mult;
+      farmInventory[c.id]=(farmInventory[c.id]||0)+qty;
+      farmUses[c.id]=(farmUses[c.id]||0)+totalUses;
+      ingredientUses[c.id]=(ingredientUses[c.id]||0)+totalUses;
+      total+=qty;count++;
+      p.crop=null;p.plantedAt=null;p.growTime=0;
+    }
+  });
+  if(count>0){
+    sndCoin();
+    addLog('🌾',`一键收获${count}块地，共${total}个果实`);
+    renderFarm();renderFarmInv();renderIG();
+    toast('🌾',`收获${count}块地 +${total}果实`);
+  }else{toast('🌾','没有可收获的作物');}
 }
 function renderFarm(){
-  document.getElementById('farmMoney').textContent='¥'+revenue;
+  document.getElementById('farmMoney').textContent='¥'+totalRevenue;
   const totalSeeds=Object.values(farmSeeds).reduce((a,b)=>a+b,0);
   document.getElementById('seedCount').textContent=totalSeeds;
   document.getElementById('plotCount').textContent=unlockedPlots;
@@ -846,26 +1024,103 @@ function renderFarm(){
       const cost=15+Math.floor(i/5)*30+(i%5)*5;
       return '<div class="plot" style="background:#d8cdc0;cursor:pointer" onclick="unlockPlot('+i+')" title="开垦 ¥'+cost+'">🔒<span class="lock">¥'+cost+'</span></div>';
     }
-    if(!p.crop)return '<div class="plot" onclick="plantCrop('+i+')" title="点击播种">🌱</div>';
+    if(!p.crop){
+      return '<div class="plot'+(seedSelected?' ready':'')+'" onclick="plantCrop('+i+')" title="'+(seedSelected?'种植 '+seedSelected:'点击播种')+'">🌱</div>';
+    }
     const c=CROPS_DATA.find(x=>x.id===p.crop);if(!c)return '<div class="plot">❓</div>';
     const elapsed=Date.now()-p.plantedAt;
     const done=elapsed>=p.growTime;
     const remain=Math.max(0,Math.ceil((p.growTime-elapsed)/1000));
-    return '<div class="plot '+(done?'ripe':'sown')+'" onclick="'+(done?'harvestCrop('+i+')':'\'\'')+'" title="'+(done?'点击收获':c.emoji+' '+remain+'s')+'">'
-      +c.emoji+(done?'':'<span class="timer">'+remain+'s</span>')+'</div>';
+    const rh=Math.floor(remain/3600), rm=Math.floor((remain%3600)/60);
+    const timeStr=done?'':(rh>0?rh+'h'+rm+'m':rm+'m');
+    return '<div class="plot '+(done?'ripe':'sown')+'" onclick="'+(done?'harvestCrop('+i+')':'\'\'')+'" title="'+(done?'点击收获':c.emoji+' 剩余'+timeStr)+'">'
+      +c.emoji+(done?'':'<span class="timer">'+timeStr+'</span>')+'</div>';
   }).join('');
+  // 种子袋
+  const avail=Object.keys(farmSeeds).filter(s=>farmSeeds[s]>0);
   const lv=getLv();
+  document.getElementById('seedBag').innerHTML=avail.length
+    ?avail.map(id=>{
+      const c=CROPS_DATA.find(x=>x.id===id);
+      if(!c||lv<c.unlock)return '';
+      const sel=seedSelected===id;
+      return '<div class="seed-item'+(sel?' sel':'')+'" onclick="selectSeed(\''+id+'\')" title="'+(sel?'点击取消':c.emoji+' '+id)+'">'
+        +'<span class="e">'+c.emoji+'</span><span class="name">'+id+'</span><span class="cnt">x'+farmSeeds[id]+'</span>'
+        +(sel?'<span class="sel-mark">✓</span>':'')+'</div>';
+    }).join('')
+    :'<span style="color:#b8a48c;font-size:.7rem">没有种子，去商店购买</span>';
   document.getElementById('farmShop').innerHTML=CROPS_DATA.filter(c=>lv>=c.unlock).map(c=>{
     const seedOwn=farmSeeds[c.id]||0;
-    return '<div class="shop-item" onclick="buySeed(\''+c.id+'\')" title="库存'+seedOwn+'">'
+    return '<div class="shop-item" onclick="buySeed(\''+c.id+'\')" title="T'+c.tier+' · '+c.growHours+'h · 每份可用'+(TIER_MULT[c.tier]||3)+'次">'
       +'<span class="e">'+c.emoji+'</span>'+c.id+'<span class="cost">¥'+c.cost+'</span>'
+      +'<span style="font-size:.5rem;color:#888;margin-left:2px">'+c.growHours+'h</span>'
       +(seedOwn>0?'<span style="font-size:.5rem;color:#27ae60">x'+seedOwn+'</span>':'')+'</div>';
   }).join('');
 }
+function sellCrop(name){
+  if(!(farmInventory[name]||0))return;
+  const c=CROPS_DATA.find(x=>x.id===name);
+  if(!c)return;
+  // 售价 = 种子价格 × (1 + tier × 0.25)
+  const price=Math.floor(c.cost*(1+c.tier*0.25));
+  if(price<=0)return;
+  // 移除1单位农仓及对应使用次数
+  const mult=TIER_MULT[c.tier]||3;
+  const removeUses=Math.min(mult,farmUses[name]||0,ingredientUses[name]||0);
+  farmInventory[name]--;
+  if(farmInventory[name]<=0)delete farmInventory[name];
+  if(removeUses>0){
+    farmUses[name]=(farmUses[name]||0)-removeUses;
+    ingredientUses[name]=(ingredientUses[name]||0)-removeUses;
+    if((farmUses[name]||0)<=0)delete farmUses[name];
+    if((ingredientUses[name]||0)<=0)delete ingredientUses[name];
+  }
+  // 加钱
+  totalRevenue+=price;
+  addLog('💰',`卖出${c.emoji}${name}，得¥${price}`);
+  upMoney();renderFarm();renderFarmInv();renderIG();
+  toast('💰',`卖出${c.emoji} +¥${price}`);
+}
+function sellAllCrops(){
+  const names=Object.keys(farmInventory);
+  if(!names.length){toast('📦','农仓是空的');return;}
+  let total=0,count=0;
+  names.forEach(name=>{
+    while((farmInventory[name]||0)>0){
+      const c=CROPS_DATA.find(x=>x.id===name);
+      if(!c)break;
+      const price=Math.floor(c.cost*(1+c.tier*0.25));
+      if(price<=0)break;
+      const mult=TIER_MULT[c.tier]||3;
+      const removeUses=Math.min(mult,farmUses[name]||0,ingredientUses[name]||0);
+      farmInventory[name]--;
+      if(removeUses>0){
+        farmUses[name]=(farmUses[name]||0)-removeUses;
+        ingredientUses[name]=(ingredientUses[name]||0)-removeUses;
+        if((farmUses[name]||0)<=0)delete farmUses[name];
+        if((ingredientUses[name]||0)<=0)delete ingredientUses[name];
+      }
+      total+=price;count++;
+    }
+    if(farmInventory[name]<=0)delete farmInventory[name];
+  });
+  if(count>0){
+    totalRevenue+=total;
+    addLog('💰',`一键卖出${count}份，得¥${total}`);
+    upMoney();renderFarm();renderFarmInv();renderIG();
+    toast('💰',`卖出${count}份 +¥${total}`);
+  }
+}
 function renderFarmInv(){
   const keys=Object.keys(farmInventory).filter(k=>farmInventory[k]>0);
+  document.getElementById('sellAllBtn').style.display=keys.length?'inline':'none';
   document.getElementById('farmInv').innerHTML=keys.length
-    ?keys.map(k=>'<span class="fi">'+(ALL_E[k]||'🥬')+k+'<span class="cnt">x'+farmInventory[k]+'</span></span>').join('')
+    ?keys.map(k=>{
+      const c=CROPS_DATA.find(x=>x.id===k);
+      const price=c?Math.floor(c.cost*(1+c.tier*0.25)):0;
+      return '<span class="fi">'+(ALL_E[k]||'🥬')+k+'<span class="cnt">x'+farmInventory[k]+'</span>'
+        +(price>0?'<button class="sell-btn" onclick="sellCrop(\''+k+'\')">¥'+price+'</button>':'')+'</span>';
+    }).join('')
     :'<span style="color:#b8a48c;font-size:.7rem">收获的食材会出现在这里</span>';
 }
 
@@ -911,9 +1166,9 @@ function importSave(e){
       const s=JSON.parse(ev.target.result);
       if(typeof s.d==='number'&&typeof s.c==='number'){
         totalDays=s.d;totalRevenue=s.r||0;totalCompleted=s.c;
-        completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;
+        completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';
         day=(s.d||0)+1;updateDay();
-        localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,t:Date.now()}));
+        localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bd:lastBizDate,t:Date.now()}));
         toast('✅','存档已导入！');
         renderIG();renderOrders();renderServe();renderStoves();renderAchv();
       }else throw new Error('格式无效');
