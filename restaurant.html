@@ -301,7 +301,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 <div class="tab-bar"><button class="tab act" id="tabKitchen" onclick="switchTab('kitchen')">🚚 餐车</button><button class="tab" id="tabFarm" onclick="switchTab('farm')">🌾 农场</button></div>
 
 <div class="farm-view" id="farmView">
-  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>⏱ <span id="farmTimer">--:--</span></span></div>
+  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span></div>
   <div class="farm-grid" id="farmGrid"></div>
   <div class="pt" style="font-size:.8rem;margin:0">🏪 种子商店</div>
   <div class="farm-shop" id="farmShop"></div>
@@ -334,6 +334,7 @@ let completedDishes=[], unlockedAchv={};
 let stock={};
 // ===== 农场系统 =====
 const CROPS_DATA = [
+  {id:'萝卜',emoji:'🥕',time:150,cost:3,yield:3,unlock:1},
   {id:'番茄',emoji:'🍅',time:180,cost:5,yield:3,unlock:1},
   {id:'青椒',emoji:'🌶',time:150,cost:4,yield:2,unlock:1},
   {id:'白菜',emoji:'🥬',time:120,cost:3,yield:3,unlock:1},
@@ -350,6 +351,7 @@ const CROPS_DATA = [
 let farmInventory={};
 let farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));
 let farmSeeds={};
+let unlockedPlots=6;
 let activeTab='kitchen';
 let farmTimerId=null;
 const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null},{id:2,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null},{id:3,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
@@ -364,11 +366,11 @@ function getLvNext() { const l=getLv(); return l<10?LV_TH[l]:-1; }
 function getLvProgress() { const l=getLv(), cur=LV_TH[l-1]||0, next=LV_TH[l]||0; const p=next-cur; return p>0?Math.min(100,(totalCompleted-cur)/p*100):100; }
 
 // Load save - enhanced with timestamp
-try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};day=(s.d||0)+1;updateDay();renderAchv();renderFarmInv();}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;day=(s.d||0)+1;updateDay();renderAchv();renderFarmInv();}}catch(e){}if(!farmSeeds['萝卜'])farmSeeds['萝卜']=5;
 // Auto-save every 10s
 setInterval(()=>{
   if(!session&&totalDays===0)return;
-  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,t:Date.now()};
+  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,t:Date.now()};
   try{localStorage.setItem('foodtruck',JSON.stringify(data));}catch(e){}
 },10000);
 
@@ -664,7 +666,7 @@ function doReset(){
   resetO.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
   totalDays=0;totalRevenue=0;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
-  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={};
+  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'萝卜':5};unlockedPlots=6;
   upMoney();updateDay();renderOrders();renderServe();renderStoves();renderAchv();renderIG();
   toast('🗑️','存档已重置');
 }
@@ -683,7 +685,7 @@ function endDay(){
   if(newLv>oldLv){toast('🎉',`升级啦！Lv.${newLv} ${LV_NAMES[newLv-1]}！新菜品解锁了！`);renderIG();}
   addLog('📊',`今日营收¥${revenue}，共${doneToday}单`);
   // Save
-  try{localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,t:Date.now()}));}catch(e){}
+  try{localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,t:Date.now()}));}catch(e){}
   
   const total=doneToday+failed;
   const rate=total>0?(doneToday/total)*100:0;
@@ -793,6 +795,16 @@ function buySeed(cropId){
   revenue-=c.cost;farmSeeds[cropId]=(farmSeeds[cropId]||0)+1;
   upMoney();renderFarm();addLog('🌱',`购买${c.emoji}种子`);
 }
+function unlockPlot(idx){
+  if(idx<unlockedPlots)return;
+  const lv=getLv();const maxByLv=Math.min(25,4+lv*2);
+  if(idx>=maxByLv){toast('🔒',`Lv.${Math.ceil((idx-3)/2)} 解锁更多土地`);return;}
+  const cost=10+Math.floor(idx/5)*5;
+  if(revenue<cost){toast('😅',`开垦需要 ¥${cost}`);return;}
+  revenue-=cost;unlockedPlots++;upMoney();
+  addLog('🔓',`开垦第${unlockedPlots}块地`);
+  renderFarm();
+}
 function plantCrop(plotIdx){
   const p=farmPlots[plotIdx];if(!p||p.crop)return;
   const avail=Object.keys(farmSeeds).filter(s=>farmSeeds[s]>0);
@@ -816,7 +828,13 @@ function renderFarm(){
   document.getElementById('farmMoney').textContent='¥'+revenue;
   const totalSeeds=Object.values(farmSeeds).reduce((a,b)=>a+b,0);
   document.getElementById('seedCount').textContent=totalSeeds;
+  document.getElementById('plotCount').textContent=unlockedPlots;
+  const maxPlots=Math.min(25,unlockedPlots);
   document.getElementById('farmGrid').innerHTML=farmPlots.map((p,i)=>{
+    if(i>=maxPlots){
+      const cost=10+Math.floor(i/5)*5;
+      return '<div class="plot" style="background:#d8cdc0;cursor:pointer" onclick="unlockPlot('+i+')" title="开垦 ¥'+cost+'">🔒<span class="lock">¥'+cost+'</span></div>';
+    }
     if(!p.crop)return '<div class="plot" onclick="plantCrop('+i+')" title="点击播种">🌱</div>';
     const c=CROPS_DATA.find(x=>x.id===p.crop);if(!c)return '<div class="plot">❓</div>';
     const elapsed=Date.now()-p.plantedAt;
@@ -882,9 +900,9 @@ function importSave(e){
       const s=JSON.parse(ev.target.result);
       if(typeof s.d==='number'&&typeof s.c==='number'){
         totalDays=s.d;totalRevenue=s.r||0;totalCompleted=s.c;
-        completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};
+        completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;
         day=(s.d||0)+1;updateDay();
-        localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,t:Date.now()}));
+        localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,t:Date.now()}));
         toast('✅','存档已导入！');
         renderIG();renderOrders();renderServe();renderStoves();renderAchv();
       }else throw new Error('格式无效');
