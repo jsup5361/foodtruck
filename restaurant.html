@@ -482,7 +482,11 @@ function renderStoves(){
   }).join('');
 }
 
-function selSt(id){selStove=selStove===id?null:id;coldBowl.sel=false;renderStoves();renderBowl();}
+function selSt(id){
+  const s=stoves.find(x=>x.id===id);
+  if(s&&s.st!=='idle'){if(selStove===id){selStove=null;coldBowl.sel=false;renderStoves();renderBowl();}return;}
+  selStove=selStove===id?null:id;coldBowl.sel=false;renderStoves();renderBowl();
+}
 function setCw(id,c){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;s.cw=s.cw===c?null:c;if(s.cw!=='炒锅')s.mt=null;if(s.cw)addLog('🍳',`选了${s.cw}`);renderStoves();renderBowl();}
 function setMt(id,m){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;s.mt=s.mt===m?null:m;if(s.mt)addLog('🔥',`灶${s.id}选「${s.mt}」`);renderStoves();renderBowl();}
 function clSt(id){const s=stoves.find(x=>x.id===id);if(!s)return;s.ig=[];renderStoves();}
