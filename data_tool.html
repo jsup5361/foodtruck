@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 餐车数据可视化</title>
+<script src="recipes.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6ed;padding:20px;color:#3d2b1a}
+h1{text-align:center;font-size:1.6rem;margin-bottom:4px}
+.sub{text-align:center;color:#8b7355;font-size:.85rem;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1100px;margin:0 auto}
+.card{background:#fff;border:2px solid #e8ddd0;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.card h2{font-size:1rem;color:#6b4c32;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f0e8e0}
+canvas{width:100%;height:260px;display:block;background:#fefcf8;border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:.75rem}
+th{background:#6b4c32;color:#fff;padding:6px 8px;text-align:left;position:sticky;top:0}
+td{padding:5px 8px;border-bottom:1px solid #f0e8e0}
+tr:hover{background:#f5eee5}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.stars{color:#e67e22}
+.full{grid-column:1/3}
+.table-wrap{max-height:500px;overflow-y:auto;border-radius:8px;border:1px solid #e8ddd0}
+.stats-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px}
+.stat-box{flex:1;min-width:100px;background:#faf5ee;border-radius:10px;padding:12px;text-align:center}
+.stat-box .num{font-size:1.6rem;font-weight:800;color:#e67e22;text-align:center}
+.stat-box .label{font-size:.7rem;color:#8b7355;margin-top:2px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:1}}
+</style>
+</head>
+<body>
+<h1>📊 餐车数据可视化</h1>
+<div class="sub">数据源: recipes.js（共 <span id="totalCount"></span> 道菜谱）</div>
+<div class="grid" id="app"></div>
+
+<script>
+const R2 = R; // from recipes.js
+document.getElementById('totalCount').textContent = R2.length;
+
+const CAT_EMOJIS = { '鸡蛋':'🥚','豆腐':'🧊','猪肉':'🥩','鸡肉':'🐔','牛肉':'🥩','鱼虾':'🦐','蔬菜':'🥬','汤羹':'🥣','凉拌':'🥗' };
+const COOKWARE_EMOJIS = { '炒锅':'🍳','煎锅':'🍳','蒸锅':'♨️' };
+
+// Stats
+const maxTime = Math.max(...R2.map(r => r.t));
+const minTime = Math.min(...R2.map(r => r.t));
+const avgTime = (R2.reduce((s,r) => s+r.t, 0) / R2.length).toFixed(1);
+const maxPrice = Math.max(...R2.map(r => r.p));
+const minPrice = Math.min(...R2.map(r => r.p));
+const avgPrice = (R2.reduce((s,r) => s+r.p, 0) / R2.length).toFixed(1);
+const catCount = {}; R2.forEach(r => { catCount[r.c] = (catCount[r.c] || 0) + 1; });
+const cwCount = {}; R2.forEach(r => { const c = r.cw || '无需'; cwCount[c] = (cwCount[c] || 0) + 1; });
+
+// Sort helpers
+const sortedByTime = [...R2].sort((a,b) => a.t - b.t);
+const sortedByPrice = [...R2].sort((a,b) => a.p - b.p);
+const sortedByStar = [...R2].sort((a,b) => a.s - b.s);
+
+const app = document.getElementById('app');
+
+// Stats cards
+app.innerHTML = `
+  <div class="card full"><h2>📈 总览统计</h2><div class="stats-row">
+    <div class="stat-box"><div class="num">${R2.length}</div><div class="label">总菜谱数</div></div>
+    <div class="stat-box"><div class="num">${minTime}s ~ ${maxTime}s</div><div class="label">烹饪时间范围</div></div>
+    <div class="stat-box"><div class="num">${avgTime}s</div><div class="label">平均烹饪时间</div></div>
+    <div class="stat-box"><div class="num">¥${minPrice} ~ ¥${maxPrice}</div><div class="label">价格范围</div></div>
+    <div class="stat-box"><div class="num">¥${avgPrice}</div><div class="label">平均价格</div></div>
+    <div class="stat-box"><div class="num">${Object.keys(catCount).length}</div><div class="label">菜品分类数</div></div>
+  </div></div>
+  <div class="card"><h2>⏱ 难度 vs 烹饪时间</h2><canvas id="chart1"></canvas></div>
+  <div class="card"><h2>💰 难度 vs 价格</h2><canvas id="chart2"></canvas></div>
+  <div class="card"><h2>⏱ 烹饪时间分布</h2><canvas id="chart3"></canvas></div>
+  <div class="card"><h2>💰 价格分布</h2><canvas id="chart4"></canvas></div>
+  <div class="card"><h2>📊 分类占比</h2><canvas id="chart5"></canvas></div>
+  <div class="card"><h2>🔧 炊具分布</h2><canvas id="chart6"></canvas></div>
+  <div class="card full"><h2>📋 完整数据表</h2><div class="table-wrap"><table id="dataTable"></table></div></div>
+`;
+
+// Draw scatter plot
+function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = 520;
+  const pad = { top: 30, right: 20, bottom: 50, left: 55 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  
+  const xVals = R2.map(r => r[xField]);
+  const yVals = R2.map(r => r[yField]);
+  const xMin = Math.min(...xVals) - 0.5;
+  const xMax = Math.max(...xVals) + 0.5;
+  const yMin = Math.min(...yVals) - 1;
+  const yMax = Math.max(...yVals) + 2;
+  
+  const sx = (v) => pad.left + (v - xMin) / (xMax - xMin) * cw;
+  const sy = (v) => pad.top + ch - (v - yMin) / (yMax - yMin) * ch;
+  
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#fefcf8'; ctx.fillRect(0, 0, W, H);
+  
+  // Grid lines
+  ctx.strokeStyle = '#f0e8e0'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const x = pad.left + i/5*cw;
+    const y = pad.top + i/5*ch;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top+ch); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+cw, y); ctx.stroke();
+  }
+  
+  // Axis labels
+  ctx.fillStyle = '#666'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center';
+  for (let i = 0; i <= 5; i++) {
+    const xv = xMin + i/5*(xMax-xMin);
+    ctx.fillText(xv.toFixed(1), sx(xv), pad.top+ch+30);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const yv = yMin + i/5*(yMax-yMin);
+    ctx.fillText(yv.toFixed(1), pad.left-8, sy(yv)+6);
+  }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '16px sans-serif';
+  ctx.fillText(xLabel, pad.left + cw/2, H - 8);
+  ctx.save(); ctx.translate(14, pad.top+ch/2); ctx.rotate(-Math.PI/2); ctx.fillText(yLabel, 0, 0); ctx.restore();
+  
+  // Data points
+  R2.forEach(r => {
+    const x = sx(r[xField]), y = sy(r[yField]);
+    const starSize = 4 + r.s;
+    ctx.beginPath(); ctx.arc(x, y, starSize, 0, Math.PI*2);
+    ctx.fillStyle = r.s >= 6 ? '#e67e22' : (r.s >= 4 ? '#d4a373' : '#88bb88');
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+    // Hover labels not implemented for simplicity
+  });
+  
+  // Trend line (simple linear regression)
+  const n = R2.length;
+  const sumX = R2.reduce((s,r) => s+r[xField], 0);
+  const sumY = R2.reduce((s,r) => s+r[yField], 0);
+  const sumXY = R2.reduce((s,r) => s+r[xField]*r[yField], 0);
+  const sumXX = R2.reduce((s,r) => s+r[xField]*r[xField], 0);
+  const slope = (n*sumXY - sumX*sumY) / (n*sumXX - sumX*sumX);
+  const inter = (sumY - slope*sumX) / n;
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(sx(xMin), sy(xMin*slope+inter)); ctx.lineTo(sx(xMax), sy(xMax*slope+inter)); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// Draw bar chart
+function drawBars(canvasId, labels, values, color) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = 520;
+  const pad = { top: 20, right: 20, bottom: 50, left: 55 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  const maxV = Math.max(...values) * 1.15;
+  const bw = Math.min(60, cw / labels.length * 0.7);
+  const gap = (cw - bw * labels.length) / (labels.length + 1);
+  
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#fefcf8'; ctx.fillRect(0, 0, W, H);
+  
+  // Grid
+  ctx.strokeStyle = '#f0e8e0'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + i/4*ch;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+cw, y); ctx.stroke();
+  }
+  
+  // Axis
+  ctx.fillStyle = '#666'; ctx.font = '18px sans-serif'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    ctx.fillText((maxV*i/4).toFixed(0), pad.left-8, pad.top+ch - i/4*ch + 6);
+  }
+  
+  // Bars
+  labels.forEach((l, i) => {
+    const x = pad.left + gap + i * (bw + gap);
+    const h = values[i] / maxV * ch;
+    ctx.fillStyle = color || '#e67e22';
+    ctx.fillRect(x, pad.top + ch - h, bw, h);
+    ctx.fillStyle = '#666'; ctx.textAlign = 'center'; ctx.font = '14px sans-serif';
+    const label = l.length > 4 ? l.slice(0,4) : l;
+    ctx.save(); ctx.translate(x+bw/2, pad.top+ch+8); ctx.rotate(0); ctx.fillText(label, 0, 12); ctx.restore();
+    ctx.fillStyle = '#888'; ctx.font = '13px sans-serif';
+    ctx.fillText(values[i], x+bw/2, pad.top+ch - h - 5);
+  });
+}
+
+// Draw donut chart
+function drawDonut(canvasId, labels, values, colors) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = 520;
+  const cx = W/2, cy = H/2 - 20, R = Math.min(W,H)/2 - 80, r = R * 0.55;
+  const total = values.reduce((s,v) => s+v, 0);
+  
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#fefcf8'; ctx.fillRect(0, 0, W, H);
+  
+  let start = -Math.PI/2;
+  const palette = ['#e67e22','#d4a373','#27ae60','#3498db','#9b59b6','#e74c3c','#1abc9c','#f39c12','#2c3e50'];
+  
+  values.forEach((v, i) => {
+    const sweep = v / total * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx + r*Math.cos(start), cy + r*Math.sin(start));
+    ctx.arc(cx, cy, R, start, start+sweep);
+    ctx.arc(cx, cy, r, start+sweep, start, true);
+    ctx.closePath();
+    ctx.fillStyle = colors[i] || palette[i % palette.length];
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    const mid = start + sweep/2;
+    const lx = cx + (R+20)*Math.cos(mid);
+    const ly = cy + (R+20)*Math.sin(mid);
+    ctx.fillStyle = '#444'; ctx.font = '14px sans-serif'; ctx.textAlign = mid > Math.PI/2 && mid < Math.PI*1.5 ? 'right' : 'left';
+    ctx.fillText(`${labels[i]} (${v})`, lx, ly);
+    
+    start += sweep;
+  });
+  ctx.fillStyle = '#666'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`共 ${total} 道`, cx, cy+6);
+}
+
+// Draw distribution
+function drawDist(canvasId, field, label, bins) {
+  const vals = R2.map(r => r[field]);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const binW = (max - min) / bins || 1;
+  const counts = new Array(bins).fill(0);
+  vals.forEach(v => { const idx = Math.min(bins-1, Math.floor((v-min)/binW)); counts[idx]++; });
+  const labels = counts.map((_, i) => `${(min+i*binW).toFixed(0)}-${(min+(i+1)*binW).toFixed(0)}`);
+  drawBars(canvasId, labels, counts, '#3498db');
+}
+
+// Animate charts
+setTimeout(() => {
+  drawScatter('chart1', 's', '难度（星数）', 't', '烹饪时间（秒）');
+  drawScatter('chart2', 's', '难度（星数）', 'p', '价格（¥）');
+  drawDist('chart3', 't', '时间', 8);
+  drawDist('chart4', 'p', '价格', 8);
+  
+  const catLabels = Object.keys(catCount);
+  const catVals = Object.values(catCount);
+  const catColors = ['#f39c12','#95a5a6','#e74c3c','#3498db','#2c3e50','#1abc9c','#27ae60','#9b59b6','#e67e22'];
+  drawDonut('chart5', catLabels, catVals, catColors);
+  
+  const cwLabels = Object.keys(cwCount);
+  const cwVals = Object.values(cwCount);
+  drawDonut('chart6', cwLabels, cwVals, ['#e67e22','#3498db','#27ae60','#95a5a6']);
+  
+  // Data table
+  const thead = ['菜名','分类','难度','时间','价格','炊具','方法','食材数','调料数'];
+  let html = `<tr>${thead.map(h=>`<th>${h}</th>`).join('')}</tr>`;
+  sortedByTime.forEach(r => {
+    html += `<tr><td>${r.e} ${r.n}</td><td>${CAT_EMOJIS[r.c]||''} ${r.c}</td>
+      <td class="stars">${'⭐'.repeat(Math.min(r.s,4))}</td>
+      <td class="num">${r.t}s</td><td class="num">¥${r.p}</td>
+      <td>${COOKWARE_EMOJIS[r.cw]||'🥗'} ${r.cw||'凉拌'}</td>
+      <td>${r.m||'—'}</td><td class="num">${r.i.length}</td><td class="num">${r.se.length}</td></tr>`;
+  });
+  document.getElementById('dataTable').innerHTML = html;
+}, 100);
+</script>
+</body>
+</html>
