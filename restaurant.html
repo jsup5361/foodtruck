@@ -800,7 +800,7 @@ function confirmEC(){cfO.classList.add('act');}
 function cancelEC(){cfO.classList.remove('act');}
 function doEC(){cfO.classList.remove('act');endDay();}
 const resetO=document.getElementById('resetOver');
-function confirmReset(){resetO.classList.add('act');}
+function confirmReset(){cfO.classList.remove('act');smO.classList.remove('act');resetO.classList.add('act');}
 function cancelReset(){resetO.classList.remove('act');}
 function doReset(){
   resetO.classList.remove('act');
@@ -851,7 +851,6 @@ function endDay(){
 function nextDay(){
   smO.classList.remove('act');
   document.getElementById('smRate').style.width='0%';
-  day++;
   orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;
   stoves.forEach(s=>{s.ig=[];s.cw=null;s.mt=null;s.st='idle';s.dish=null;s.rem=0;s.tot=0;});
   renderOrders();renderServe();renderStoves();
