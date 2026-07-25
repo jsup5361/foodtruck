@@ -358,21 +358,29 @@ const ALL_E = {
 };
 const CW = ["炒锅","煎锅","蒸锅"];
 const MTH = ["炒","炸","爆","熘","炖","煮"];
-// 食材虚空购买价格表（每5次使用）
+// 食材虚空购买价格表
 const IG_PRICE = {
-  '盐':5,'糖':5,'酱油':5,'醋':5,'料酒':5,
-  '豆瓣酱':5,'蚝油':5,'番茄酱':5,'胡椒粉':5,'鸡精':5,'淀粉':5,
-  '辣椒':5,'花椒':5,'蒜':5,'姜':5,'葱':5,
+  // 调料/配料/主食：¥2/30次（廉价大包装）
+  '盐':2,'糖':2,'酱油':2,'醋':2,'料酒':2,
+  '豆瓣酱':2,'蚝油':2,'番茄酱':2,'胡椒粉':2,'鸡精':2,'淀粉':2,
+  '辣椒':2,'花椒':2,'蒜':2,'姜':2,'葱':2,
+  '面条':2,'米饭':2,
+  // 基础食材 ¥8/5次
   '鸡蛋':8,'豆腐':8,'豆芽':8,'花生':8,'紫菜':8,
   '菠菜':8,'生菜':8,'苦瓜':8,'韭菜':8,'香菇':8,
+  // 中级食材 ¥12/5次
   '番茄':12,'土豆':12,'白菜':12,'青椒':12,'洋葱':12,'茄子':12,
   '黄瓜':12,'胡萝卜':12,'白萝卜':12,'冬瓜':12,'南瓜':12,
   '木耳':12,'西兰花':12,'蒜苔':12,'莲藕':12,'豆角':12,'山药':12,
   '鸡翅':12,'鸡胸':12,
+  // 高级食材 ¥20/5次
   '猪肉':20,'鸡腿':20,'虾仁':20,'鱼肉':20,
+  // 顶级食材 ¥30/5次
   '牛肉':30,'排骨':30,'五花肉':30,'羊肉':30,
-  '面条':5,'米饭':5,
 };
+// 大包装食材：每次补货给30次使用（调料/配料/主食）
+const BULK_ITEMS = new Set(['盐','糖','酱油','醋','料酒','豆瓣酱','蚝油','番茄酱','胡椒粉','鸡精','淀粉','辣椒','花椒','蒜','姜','葱','面条','米饭']);
+const IG_QTY = name => BULK_ITEMS.has(name) ? 30 : 5;
 
 // ===== State =====
 let orders=[], served=[], selOrder=null, completed=0, failed=0, revenue=0, session=false;
@@ -527,7 +535,8 @@ function mkItem(n){
   const uses=ingredientUses[n]||0;
   const empty=uses<=0;
   const hasFarm=(farmUses[n]||0)>0;
-  return `<div class="igb ${empty?'out':''}" onclick="addIng('${n}')" title="${empty?'¥'+(IG_PRICE[n]||5)+'买5次':n+' 可用'+uses+'次（¥'+(IG_PRICE[n]||5)+'/5次）'}">
+  const qty=IG_QTY(n);
+  return `<div class="igb ${empty?'out':''}" onclick="addIng('${n}')" title="${empty?'¥'+(IG_PRICE[n]||5)+'买'+qty+'次':n+' 可用'+uses+'次（¥'+(IG_PRICE[n]||5)+'/'+qty+'次）'}">
     <span class="e">${ALL_E[n]||'🥬'}</span>${n}${hasFarm?`<span class="farm-badge">🌾</span>`:''}${empty?'<br><span style="font-size:.5rem;color:#e74c3c">¥'+(IG_PRICE[n]||5)+'</span>':''}
   </div>`;
 }
@@ -575,9 +584,17 @@ function updateBizBtn(){
 }
 
 // ===== Orders =====
-function spawnB(){if(!session||orders.length>=4)return;sndDing();spawnO();}
+function spawnB(){
+  if(!session||doneToday>=15)return;
+  if(orders.length>=3)return;
+  sndDing();spawnO();
+  // 30% 概率额外刷新1道（最多3道）
+  if(orders.length<3&&Math.random()<0.3){
+    setTimeout(()=>{if(session&&orders.length<3&&doneToday<15){sndDing();spawnO();}},400);
+  }
+}
 function spawnO(){
-  if(!session||orders.length>=4)return;
+  if(!session||orders.length>=3||doneToday>=15)return;
   const maxS=getLvMaxStars();
   const available=DNAMES.filter(n=>R.find(x=>x.n===n).s<=maxS);
   const name=available[Math.floor(Math.random()*available.length)], r=R.find(x=>x.n===name);
@@ -599,6 +616,8 @@ function serveO(id){
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
   addLog('✅',`上菜完成「${o.dish}」¥${o.price}`);
   completed++;doneToday++;revenue+=o.price;totalRevenue+=o.price;upMoney();
+  // 每日上限15道菜
+  if(doneToday>=15){setTimeout(()=>{if(session)endDay();},300);return;}
   if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
   checkAchv();
   clearInterval(o.tid);
@@ -659,27 +678,26 @@ function setMt(id,m){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')retu
 function clSt(id){const s=stoves.find(x=>x.id===id);if(!s)return;s.ig=[];renderStoves();}
 
 function addIng(name){
-  // 开工前点击食材=补货，每次扣钱加5次使用
+  // 开工前点击食材=补货
   if(!session){
-    const cost=IG_PRICE[name]||5;
+    const cost=IG_PRICE[name]||5,qty=IG_QTY(name);
     if(totalRevenue<cost){toast('😅','金币不够！');return;}
     totalRevenue-=cost;
-    ingredientUses[name]=(ingredientUses[name]||0)+5;
-    stock[name]=(stock[name]||0)+5;
+    ingredientUses[name]=(ingredientUses[name]||0)+qty;
+    stock[name]=(stock[name]||0)+qty;
     upMoney();renderIG();
-    addLog('🛒',`花¥${cost}购买${name}（5次使用）`);
+    addLog('🛒',`花¥${cost}购买${name}（${qty}次使用）`);
     return;
   }
   // === 食材使用次数系统 ===
-  // 总可用次数不足 → 按食材价格虚空购买（每5次使用）
   if((ingredientUses[name]||0)<=0){
-    const cost=IG_PRICE[name]||5;
+    const cost=IG_PRICE[name]||5,qty=IG_QTY(name);
     if(totalRevenue<cost){toast('😅','金币不够！');return;}
     totalRevenue-=cost;
-    ingredientUses[name]=(ingredientUses[name]||0)+5;
-    stock[name]=(stock[name]||0)+5;
+    ingredientUses[name]=(ingredientUses[name]||0)+qty;
+    stock[name]=(stock[name]||0)+qty;
     upMoney();renderIG();
-    addLog('🛒',`花¥${cost}购买${name}（5次使用）`);
+    addLog('🛒',`花¥${cost}购买${name}（${qty}次使用）`);
     // 补货后继续消耗 1 次
   }
   // 消耗 1 次使用次数
@@ -725,7 +743,7 @@ function startCk(id){
   s.tid=setInterval(()=>{if(!session){clearInterval(s.tid);return;}s.rem=Math.max(0,match.t-(Date.now()-start)/1000);if(s.rem<=0){s.rem=0;s.st='done';clearInterval(s.tid);selStove=null;}renderStoves();},200);
   renderStoves();
 }
-function cancelCk(id){const s=stoves.find(x=>x.id===id);if(!s)return;clearInterval(s.tid);s.tid=null;addLog('✕',`取消灶${s.id}烹饪`);s.st='idle';s.dish=null;s.rem=0;s.tot=0;renderStoves();}
+function cancelCk(id){const s=stoves.find(x=>x.id===id);if(!s)return;clearInterval(s.tid);s.tid=null;addLog('✕',`取消灶${s.id}烹饪`);s.st='idle';s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;selStove=null;renderStoves();}
 function svSt(id){
   const s=stoves.find(x=>x.id===id);if(!s||s.st!=='done')return;
   const dishName=s.dish;
@@ -733,7 +751,7 @@ function svSt(id){
   sndCoin();
   served.push(dishName);
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting')o.st='cooking';});
-  s.ig=[];s.dish=null;s.st='idle';s.rem=0;s.tot=0;
+  s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;
   selStove=null;
   renderStoves();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='cooking')o.st='done';});
