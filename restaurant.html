@@ -622,11 +622,15 @@ function serveO(id){
   addLog('✅',`上菜完成「${o.dish}」¥${o.price}`);
   completed++;doneToday++;revenue+=o.price;totalRevenue+=o.price;upMoney();
   // 每日上限15道菜
-  if(doneToday>=15){setTimeout(()=>{if(session)endDay();},300);return;}
+  const isLast=doneToday>=15;
   if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
   checkAchv();
   clearInterval(o.tid);
-  setTimeout(()=>{orders=orders.filter(x=>x.id!==id);renderOrders();renderServe();if(selOrder===id){selOrder=null;rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}if(session)spawnB();},500);
+  setTimeout(()=>{
+    orders=orders.filter(x=>x.id!==id);renderOrders();renderServe();
+    if(selOrder===id){selOrder=null;rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}
+    if(isLast){if(session)endDay();}else if(session)spawnB();
+  },500);
 }
 
 function renderOrders(){
