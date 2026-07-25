@@ -4,7 +4,7 @@
 
 ## 🎮 在线体验
 
-直接用浏览器打开 `restaurant.html` 即可游玩。
+直接访问 [https://jsup5361.github.io/foodtruck/](https://jsup5361.github.io/foodtruck/) 即可游玩。
 
 ## ✨ 功能特性
 
