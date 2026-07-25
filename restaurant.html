@@ -305,6 +305,8 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
   </div>
 </header>
 
+<div class="tab-bar"><button class="tab act" id="tabKitchen" onclick="switchTab('kitchen')">🚚 餐车</button><button class="tab" id="tabFarm" onclick="switchTab('farm')">🌾 农场</button></div>
+
 <div class="cf" id="cfOver"><div class="cf-b"><div style="font-size:2.2rem">😴</div><p>提前打烊？没做完的订单会作废！</p><div class="cf-ac"><button class="cy" onclick="doEC()">确定</button><button class="cn" onclick="cancelEC()">继续</button></div></div></div>
 
 <div class="cf" id="resetOver"><div class="cf-b"><div style="font-size:2.5rem">⚠️</div><p>确定重置所有存档？<br><span style="font-size:.75rem;color:#e74c3c">所有等级、金币、成就将清空！</span></p><div class="cf-ac"><button class="cy" onclick="doReset()">重置</button><button class="cn" onclick="cancelReset()">取消</button></div></div></div>
@@ -323,8 +325,6 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 </div>
 <div class="tc" id="tc"></div>
 
-<div class="tab-bar"><button class="tab act" id="tabKitchen" onclick="switchTab('kitchen')">🚚 餐车</button><button class="tab" id="tabFarm" onclick="switchTab('farm')">🌾 农场</button></div>
-
 <div class="farm-view" id="farmView">
   <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span><button class="db-toggle" id="dbToggle" onclick="toggleDebug()">🔧</button></div>
   <div class="db-panel" id="dbPanel">
@@ -336,7 +336,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
     <button class="db-btn danger" onclick="debugRipe()">🌾 全部成熟</button>
   </div>
   <div class="farm-grid" id="farmGrid"></div>
-  <div class="pt" style="font-size:.75rem;margin:6px 0 4px">🎒 种子袋</div>
+  <div class="pt" style="font-size:.75rem;margin:6px 0 4px">🎒 种子袋 <button class="plant-all-btn" id="plantAllBtn" onclick="plantAll()" style="font-size:.6rem;padding:1px 6px;border-radius:4px;border:1px solid #e67e22;background:#fff;color:#e67e22;cursor:pointer">🌱 一键种植</button></div>
   <div class="seed-bag" id="seedBag"><span style="color:#b8a48c;font-size:.7rem">没有种子，去商店购买</span></div>
   <div class="pt" style="font-size:.8rem;margin:4px 0">🏪 种子商店</div>
   <div class="farm-shop" id="farmShop"></div>
@@ -961,6 +961,33 @@ function buySeed(cropId){
   totalRevenue-=cost;farmSeeds[cropId]=(farmSeeds[cropId]||0)+n;
   upMoney();renderFarm();addLog('🌱',`购买${c.emoji}x${n}种子，花¥${cost}`);
 }
+function plantAll(){
+  const avail=Object.keys(farmSeeds).filter(s=>farmSeeds[s]>0);
+  if(!avail.length){toast('🌱','没有种子！');return;}
+  // 按 tier 降序、价格降序排列（优先种成熟时间长、价格高的）
+  const sorted=avail.map(id=>{
+    const c=CROPS_DATA.find(x=>x.id===id);
+    return{id,tier:c?.tier||0,cost:c?.cost||0};
+  }).sort((a,b)=>b.tier-a.tier||b.cost-a.cost);
+  let planted=0;
+  for(let i=0;i<unlockedPlots;i++){
+    const p=farmPlots[i];
+    if(p.crop)continue;
+    const seed=sorted.find(s=>farmSeeds[s.id]>0);
+    if(!seed)break;
+    const c=CROPS_DATA.find(x=>x.id===seed.id);
+    farmSeeds[seed.id]--;
+    if(farmSeeds[seed.id]<=0)delete farmSeeds[seed.id];
+    p.crop=seed.id;p.plantedAt=Date.now();p.growTime=c.growHours*3600*1000;
+    planted++;
+  }
+  if(planted>0){
+    seedSelected=null;
+    addLog('🌱',`一键种植${planted}块地`);
+    renderFarm();
+    toast('🌱',`种植了 ${planted} 块地`);
+  }else{toast('🌱','没有空地或种子了');}
+}
 function unlockPlot(idx){
   if(idx<unlockedPlots)return;
   const lv=getLv();const maxByLv=Math.min(25,4+lv*2);
@@ -1171,7 +1198,7 @@ function renderAchv(){
 
 // ===== 导出/导入存档 =====
 function exportSave(){
-  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,t:Date.now()};
+  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bd:lastBizDate,sd:soundOn?1:0,t:Date.now()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -1187,7 +1214,7 @@ function importSave(e){
       if(typeof s.d==='number'&&typeof s.c==='number'){
         totalDays=s.d;totalRevenue=s.r||0;totalCompleted=s.c;
         completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';
-        day=totalDays||1;updateDay();
+        day=totalDays||1;updateDay();if(s.sd!==undefined)soundOn=!!s.sd;document.getElementById('soundBtn').textContent=soundOn?'🔊':'🔇';
         localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bd:lastBizDate,t:Date.now()}));
         toast('✅','存档已导入！');
         renderIG();renderOrders();renderServe();renderStoves();renderAchv();

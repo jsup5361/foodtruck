@@ -35,11 +35,24 @@ tr:hover{background:#f5eee5}
 <div class="grid" id="app"></div>
 
 <script>
-const R2 = R; // from recipes.js
+const R2 = R;
 document.getElementById('totalCount').textContent = R2.length;
 
 const CAT_EMOJIS = { '鸡蛋':'🥚','豆腐':'🧊','猪肉':'🥩','鸡肉':'🐔','牛肉':'🥩','鱼虾':'🦐','蔬菜':'🥬','汤羹':'🥣','凉拌':'🥗' };
 const COOKWARE_EMOJIS = { '炒锅':'🍳','煎锅':'🍳','蒸锅':'♨️' };
+
+// Collect all unique ingredients and seasonings
+const allIngs = new Set(); R2.forEach(r => r.i.forEach(x => allIngs.add(x)));
+const allSeas = new Set(); R2.forEach(r => r.se.forEach(x => allSeas.add(x)));
+const ingStats = {}; // ingredient -> {count, starSum, dishes:[]}
+R2.forEach(r => {
+  [...r.i, ...r.se].forEach(x => {
+    if(!ingStats[x]) ingStats[x] = {count:0, starSum:0, dishes:[]};
+    ingStats[x].count++;
+    ingStats[x].starSum += r.s;
+    ingStats[x].dishes.push(r.n);
+  });
+});
 
 // Stats
 const maxTime = Math.max(...R2.map(r => r.t));
@@ -50,15 +63,17 @@ const minPrice = Math.min(...R2.map(r => r.p));
 const avgPrice = (R2.reduce((s,r) => s+r.p, 0) / R2.length).toFixed(1);
 const catCount = {}; R2.forEach(r => { catCount[r.c] = (catCount[r.c] || 0) + 1; });
 const cwCount = {}; R2.forEach(r => { const c = r.cw || '无需'; cwCount[c] = (cwCount[c] || 0) + 1; });
+const starCount = {}; R2.forEach(r => { starCount[r.s] = (starCount[r.s] || 0) + 1; });
 
-// Sort helpers
 const sortedByTime = [...R2].sort((a,b) => a.t - b.t);
 const sortedByPrice = [...R2].sort((a,b) => a.p - b.p);
 const sortedByStar = [...R2].sort((a,b) => a.s - b.s);
 
+// Top 10 frequently used ingredients
+const topIngs = Object.entries(ingStats).sort((a,b) => b[1].count - a[1].count).slice(0,10);
+
 const app = document.getElementById('app');
 
-// Stats cards
 app.innerHTML = `
   <div class="card full"><h2>📈 总览统计</h2><div class="stats-row">
     <div class="stat-box"><div class="num">${R2.length}</div><div class="label">总菜谱数</div></div>
@@ -67,6 +82,8 @@ app.innerHTML = `
     <div class="stat-box"><div class="num">¥${minPrice} ~ ¥${maxPrice}</div><div class="label">价格范围</div></div>
     <div class="stat-box"><div class="num">¥${avgPrice}</div><div class="label">平均价格</div></div>
     <div class="stat-box"><div class="num">${Object.keys(catCount).length}</div><div class="label">菜品分类数</div></div>
+    <div class="stat-box"><div class="num">${allIngs.size+allSeas.size}</div><div class="label">食材/调料种数</div></div>
+    <div class="stat-box"><div class="num">${R2.reduce((s,r) => s+r.i.length+r.se.length, 0)}</div><div class="label">总食材用量</div></div>
   </div></div>
   <div class="card"><h2>⏱ 难度 vs 烹饪时间</h2><canvas id="chart1"></canvas></div>
   <div class="card"><h2>💰 难度 vs 价格</h2><canvas id="chart2"></canvas></div>
@@ -74,10 +91,11 @@ app.innerHTML = `
   <div class="card"><h2>💰 价格分布</h2><canvas id="chart4"></canvas></div>
   <div class="card"><h2>📊 分类占比</h2><canvas id="chart5"></canvas></div>
   <div class="card"><h2>🔧 炊具分布</h2><canvas id="chart6"></canvas></div>
+  <div class="card"><h2>⭐ 难度分布</h2><canvas id="chart7"></canvas></div>
+  <div class="card"><h2>🥬 常用食材 Top10</h2><canvas id="chart8"></canvas></div>
   <div class="card full"><h2>📋 完整数据表</h2><div class="table-wrap"><table id="dataTable"></table></div></div>
 `;
 
-// Draw scatter plot
 function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
@@ -100,7 +118,6 @@ function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#fefcf8'; ctx.fillRect(0, 0, W, H);
   
-  // Grid lines
   ctx.strokeStyle = '#f0e8e0'; ctx.lineWidth = 1;
   for (let i = 0; i <= 5; i++) {
     const x = pad.left + i/5*cw;
@@ -109,7 +126,6 @@ function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+cw, y); ctx.stroke();
   }
   
-  // Axis labels
   ctx.fillStyle = '#666'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center';
   for (let i = 0; i <= 5; i++) {
     const xv = xMin + i/5*(xMax-xMin);
@@ -124,7 +140,6 @@ function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
   ctx.fillText(xLabel, pad.left + cw/2, H - 8);
   ctx.save(); ctx.translate(14, pad.top+ch/2); ctx.rotate(-Math.PI/2); ctx.fillText(yLabel, 0, 0); ctx.restore();
   
-  // Data points
   R2.forEach(r => {
     const x = sx(r[xField]), y = sy(r[yField]);
     const starSize = 4 + r.s;
@@ -132,10 +147,8 @@ function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
     ctx.fillStyle = r.s >= 6 ? '#e67e22' : (r.s >= 4 ? '#d4a373' : '#88bb88');
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.stroke();
-    // Hover labels not implemented for simplicity
   });
   
-  // Trend line (simple linear regression)
   const n = R2.length;
   const sumX = R2.reduce((s,r) => s+r[xField], 0);
   const sumY = R2.reduce((s,r) => s+r[yField], 0);
@@ -148,13 +161,12 @@ function drawScatter(canvasId, xField, xLabel, yField, yLabel) {
   ctx.setLineDash([]);
 }
 
-// Draw bar chart
 function drawBars(canvasId, labels, values, color) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
   const W = canvas.width = canvas.offsetWidth * 2;
   const H = canvas.height = 520;
-  const pad = { top: 20, right: 20, bottom: 50, left: 55 };
+  const pad = { top: 20, right: 20, bottom: 65, left: 55 };
   const cw = W - pad.left - pad.right;
   const ch = H - pad.top - pad.bottom;
   const maxV = Math.max(...values) * 1.15;
@@ -164,34 +176,30 @@ function drawBars(canvasId, labels, values, color) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#fefcf8'; ctx.fillRect(0, 0, W, H);
   
-  // Grid
   ctx.strokeStyle = '#f0e8e0'; ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = pad.top + i/4*ch;
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+cw, y); ctx.stroke();
   }
   
-  // Axis
   ctx.fillStyle = '#666'; ctx.font = '18px sans-serif'; ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     ctx.fillText((maxV*i/4).toFixed(0), pad.left-8, pad.top+ch - i/4*ch + 6);
   }
   
-  // Bars
   labels.forEach((l, i) => {
     const x = pad.left + gap + i * (bw + gap);
     const h = values[i] / maxV * ch;
     ctx.fillStyle = color || '#e67e22';
     ctx.fillRect(x, pad.top + ch - h, bw, h);
-    ctx.fillStyle = '#666'; ctx.textAlign = 'center'; ctx.font = '14px sans-serif';
-    const label = l.length > 4 ? l.slice(0,4) : l;
-    ctx.save(); ctx.translate(x+bw/2, pad.top+ch+8); ctx.rotate(0); ctx.fillText(label, 0, 12); ctx.restore();
+    ctx.fillStyle = '#666'; ctx.textAlign = 'center'; ctx.font = '13px sans-serif';
+    const label = l.length > 5 ? l.slice(0,5)+'..' : l;
+    ctx.save(); ctx.translate(x+bw/2, pad.top+ch+8); ctx.rotate(0); ctx.fillText(label, 0, 14); ctx.restore();
     ctx.fillStyle = '#888'; ctx.font = '13px sans-serif';
     ctx.fillText(values[i], x+bw/2, pad.top+ch - h - 5);
   });
 }
 
-// Draw donut chart
 function drawDonut(canvasId, labels, values, colors) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
@@ -204,7 +212,7 @@ function drawDonut(canvasId, labels, values, colors) {
   ctx.fillStyle = '#fefcf8'; ctx.fillRect(0, 0, W, H);
   
   let start = -Math.PI/2;
-  const palette = ['#e67e22','#d4a373','#27ae60','#3498db','#9b59b6','#e74c3c','#1abc9c','#f39c12','#2c3e50'];
+  const palette = ['#e67e22','#d4a373','#27ae60','#3498db','#9b59b6','#e74c3c','#1abc9c','#f39c12','#2c3e50','#95a5a6'];
   
   values.forEach((v, i) => {
     const sweep = v / total * Math.PI * 2;
@@ -229,7 +237,6 @@ function drawDonut(canvasId, labels, values, colors) {
   ctx.fillText(`共 ${total} 道`, cx, cy+6);
 }
 
-// Draw distribution
 function drawDist(canvasId, field, label, bins) {
   const vals = R2.map(r => r[field]);
   const min = Math.min(...vals), max = Math.max(...vals);
@@ -240,7 +247,10 @@ function drawDist(canvasId, field, label, bins) {
   drawBars(canvasId, labels, counts, '#3498db');
 }
 
-// Animate charts
+function drawRawBars(canvasId, labels, values, color) {
+  drawBars(canvasId, labels, values, color);
+}
+
 setTimeout(() => {
   drawScatter('chart1', 's', '难度（星数）', 't', '烹饪时间（秒）');
   drawScatter('chart2', 's', '难度（星数）', 'p', '价格（¥）');
@@ -256,15 +266,29 @@ setTimeout(() => {
   const cwVals = Object.values(cwCount);
   drawDonut('chart6', cwLabels, cwVals, ['#e67e22','#3498db','#27ae60','#95a5a6']);
   
-  // Data table
-  const thead = ['菜名','分类','难度','时间','价格','炊具','方法','食材数','调料数'];
+  // 难度分布
+  const starLabels = Object.keys(starCount).sort((a,b)=>a-b);
+  const starVals = starLabels.map(k => starCount[k]);
+  drawRawBars('chart7', starLabels.map(s => s+'星'), starVals, '#9b59b6');
+  
+  // 常用食材 Top10
+  drawRawBars('chart8', topIngs.map(x => x[0]), topIngs.map(x => x[1].count), '#27ae60');
+  
+  // Data table with more columns
+  const thead = ['菜名','分类','难度','时间','价格','炊具','方法','食材','调料','食材成本','倍率'];
+  // Calculate cost approximation
+  const COST_PER_USE = {'盐':0.4,'糖':0.4,'酱油':0.4,'醋':0.4,'料酒':0.4,'豆瓣酱':0.4,'蚝油':0.4,'番茄酱':0.4,'胡椒粉':0.4,'鸡精':0.4,'淀粉':0.4,'辣椒':0.4,'花椒':0.4,'蒜':0.4,'姜':0.4,'葱':0.4,'鸡蛋':1.6,'豆腐':1.6,'豆芽':1.6,'花生':1.6,'紫菜':1.6,'菠菜':1.6,'生菜':1.6,'苦瓜':1.6,'韭菜':1.6,'香菇':1.6,'番茄':2.4,'土豆':2.4,'白菜':2.4,'青椒':2.4,'洋葱':2.4,'茄子':2.4,'黄瓜':2.4,'胡萝卜':2.4,'白萝卜':2.4,'冬瓜':2.4,'南瓜':2.4,'木耳':2.4,'西兰花':2.4,'蒜苔':2.4,'莲藕':2.4,'豆角':2.4,'山药':2.4,'鸡翅':2.4,'鸡胸':2.4,'猪肉':4,'鸡腿':4,'虾仁':4,'鱼肉':4,'牛肉':6,'排骨':6,'五花肉':6,'羊肉':6,'面条':0.4,'米饭':0.4};
+  const STAR_MULT = {2:3,4:5,6:7,8:10};
   let html = `<tr>${thead.map(h=>`<th>${h}</th>`).join('')}</tr>`;
-  sortedByTime.forEach(r => {
+  sortedByPrice.reverse().forEach(r => {
+    const cost = [...r.i, ...r.se].reduce((s, x) => s + (COST_PER_USE[x]||1), 0);
+    const mult = STAR_MULT[r.s] || 3;
     html += `<tr><td>${r.e} ${r.n}</td><td>${CAT_EMOJIS[r.c]||''} ${r.c}</td>
       <td class="stars">${'⭐'.repeat(Math.min(r.s,4))}</td>
       <td class="num">${r.t}s</td><td class="num">¥${r.p}</td>
       <td>${COOKWARE_EMOJIS[r.cw]||'🥗'} ${r.cw||'凉拌'}</td>
-      <td>${r.m||'—'}</td><td class="num">${r.i.length}</td><td class="num">${r.se.length}</td></tr>`;
+      <td>${r.m||'—'}</td><td class="num">${r.i.length}</td><td class="num">${r.se.length}</td>
+      <td class="num">¥${cost.toFixed(1)}</td><td class="num">×${mult}</td></tr>`;
   });
   document.getElementById('dataTable').innerHTML = html;
 }, 100);
