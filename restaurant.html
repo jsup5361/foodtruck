@@ -632,13 +632,15 @@ function serveO(id){
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
   addLog('✅',`上菜完成「${o.dish}」¥${finalPrice}${bonus>1?' ⭐完美烹饪!':''}`);
   completed++;doneToday++;revenue+=finalPrice;totalRevenue+=finalPrice;upMoney();
-  // 食客反馈弹窗
-  const REVIEWS=['香疯了！','绝了！','太好吃了！','再来一份！','人间美味！','妈妈的味道！','五星好评！','感动到哭！','味道太棒了！','我要给十个赞！'];
-  const review=REVIEWS[Math.floor(Math.random()*REVIEWS.length)];
-  if(el){
-    const tip=document.createElement('div');tip.className='review-popup';tip.textContent=review;el.style.position='relative';el.appendChild(tip);
-    setTimeout(()=>{if(tip.parentNode)tip.remove();},2200);
-  }
+  // 食客反馈弹窗（隔离异常，不影响结算）
+  try{
+    const REVIEWS=['香疯了！','绝了！','太好吃了！','再来一份！','人间美味！','妈妈的味道！','五星好评！','感动到哭！','味道太棒了！','我要给十个赞！'];
+    const review=REVIEWS[Math.floor(Math.random()*REVIEWS.length)];
+    if(el){
+      const tip=document.createElement('div');tip.className='review-popup';tip.textContent=review;el.style.position='relative';el.appendChild(tip);
+      setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
+    }
+  }catch(e){}
   // 每日上限15道菜
   const isLast=doneToday>=15;
   if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
