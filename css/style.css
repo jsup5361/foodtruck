@@ -174,58 +174,6 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .log-empty{font-size:.6rem;color:#b8a48c;text-align:center;padding:10px 0}
 .tip-area{font-size:.65rem;color:#6b4c32;line-height:1.5;padding:4px 6px;background:#faf8f5;border-radius:6px;flex:1;overflow-y:auto;display:flex;align-items:center}
 .tip-area .re{padding:4px 0}
-@media(max-width:900px){
-.game-grid{grid-template-columns:1fr 1fr}
-.orders-pnl{grid-column:1;grid-row:1}
-.sv-pnl{grid-column:1;grid-row:2}
-.ig-pnl{grid-column:2;grid-row:1}
-.stv-pnl{grid-column:1/3;grid-row:3}
-.log-pnl{grid-column:1/3;grid-row:4}
-.sr2{flex-wrap:wrap}
-.stv{min-width:130px;flex:1 1 30%}
-.rcp-pnl{grid-column:1/3;grid-row:5}
-.achv-pnl{grid-column:1/3;grid-row:6}
-.tip-pnl{grid-column:1/3;grid-row:7}
-}
-@media(max-width:600px){
-.game-grid{grid-template-columns:1fr;gap:6px;padding:6px}
-.orders-pnl,.sv-pnl,.ig-pnl,.stv-pnl,.rcp-pnl,.achv-pnl,.tip-pnl{grid-column:1}
-.orders-pnl{max-height:40vh;overflow-y:auto}
-.sv-pnl{min-height:60px}
-.sr2{flex-direction:column;gap:8px}
-.stv{min-height:auto;padding:10px}
-.stv-cw .cwb{min-height:40px;font-size:.7rem}
-.stv-mt .mtc{min-height:36px;font-size:.7rem;padding:4px 10px}
-.sb{min-height:40px;font-size:.75rem;padding:8px}
-.header{flex-direction:column;text-align:center;padding:12px}
-.hr{width:100%;justify-content:center;flex-wrap:wrap}
-.hl h1{font-size:1.2rem}
-.hbtn{min-height:44px;min-width:44px;padding:8px 16px;font-size:.85rem}
-.game-grid .pnl{padding:10px}
-.pt{font-size:.9rem}
-.ord-it{padding:10px 12px}
-.dr .dn{font-size:.95rem}
-.dr .sv-btn{min-height:40px;min-width:44px;font-size:.8rem;padding:6px 14px}
-.ot{font-size:.8rem}
-.op{font-size:.75rem}
-.sv-it{font-size:.85rem;padding:6px 12px}
-.sz{padding:6px}
-.szt{font-size:.8rem}
-.igb{min-width:44px;min-height:44px;font-size:.75rem;padding:5px 6px}
-.igb .e{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px}
-.stv{padding:10px}
-.stv-lb{font-size:.8rem}
-.stv-ig{min-height:30px;display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap}
-.rc{font-size:.9rem}
-.cold-mod{padding:8px}
-.cold-mod .cold-bowl{width:44px;height:36px;font-size:1.3rem}
-.cold-mod .cold-igs{min-height:32px;font-size:1.1rem}
-.cold-mod .cold-btn{min-height:36px;font-size:.75rem;padding:6px 12px}
-.log-item{font-size:.75rem;padding:5px 8px}
-.tip-area{font-size:.75rem}
-.achv-item{font-size:.75rem;padding:6px 10px}
-.achv-item .ai{font-size:1.3rem}
-}
 /* ===== Tab & Farm ===== */
 .tab-bar{display:flex;gap:4px;margin-bottom:6px;width:100%;max-width:1200px}
 .tab{flex:1;padding:10px;border:2px solid #e8ddd0;border-radius:10px 10px 0 0;background:#f5f0eb;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;color:#8b7355;text-align:center}
@@ -276,11 +224,6 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .db-btn:hover{background:#d4a373;color:#fff}
 .db-btn.danger{border-color:#e74c3c;color:#e74c3c}
 .db-btn.danger:hover{background:#e74c3c;color:#fff}
-@media(max-width:600px){
-.farm-grid{max-width:100%;gap:6px}
-.plot{min-height:50px;font-size:1.4rem}
-.shop-item{min-width:48px;padding:4px 6px}
-}
 
 /* ===== 食材图片 ===== */
 .ig-img{object-fit:contain;border-radius:4px;image-rendering:auto;vertical-align:middle;display:inline-block}
