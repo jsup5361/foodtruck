@@ -18,7 +18,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .game-grid{width:100%;max-width:1200px;display:grid;grid-template-columns:230px 1fr 185px;gap:8px;background:#fffbf5;border:3px solid #e8ddd0;border-top:none;border-radius:0 0 16px 16px;padding:10px;box-shadow:0 3px 12px rgba(0,0,0,.05)}
 .pnl{background:#fff;border:2px solid #e8ddd0;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.03)}
 .pt{font-size:.8rem;font-weight:700;color:#6b4c32;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #f0e8e0;display:flex;align-items:center;gap:5px}
-.orders-pnl{grid-column:1;grid-row:1;overflow-y:auto}
+.orders-pnl{grid-column:1;grid-row:1;height:300px;overflow-y:auto;align-self:start}
 .ord-it{position:relative;overflow:hidden;background:#fefcf8;border:1.5px solid #e8ddd0;border-radius:9px;padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:all .2s}
 .ord-it:hover{border-color:#d4a373}
 .ord-it.sel{border-color:#e67e22;box-shadow:0 0 0 2px rgba(230,126,34,.2)}
