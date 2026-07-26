@@ -948,9 +948,19 @@ function cancelReset(){const e=_resetEl();if(e)e.classList.remove('act');}
 function doReset(){
   const e=_resetEl();if(!e)return;
   e.classList.remove('act');
+  // 清除所有定时器防止自动保存污染
+  if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
+  stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;});
+  orders.forEach(o=>clearInterval(o.tid));
   try{localStorage.removeItem('foodtruck');}catch(e){}
-  toast('🗑️','存档已重置，页面即将刷新…');
-  setTimeout(()=>location.reload(),600);
+  // 全部状态还原为初始值
+  totalDays=0;totalRevenue=50;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
+  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};boardSelected=false;stoveChopped={};coldChopped={};
+  lastBizDate='';session=false;orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;gameLog=[];
+  stoves.forEach(s=>{s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.cutState='none';});
+  // 重新渲染全部界面
+  upMoney();updateDay();updateBizBtn();renderOrders();renderServe();renderStoves();renderBowl();renderIG();renderAchv();renderFarmInv();renderLog();
+  toast('🗑️','存档已重置');
 }
 
 function endDay(){
