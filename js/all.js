@@ -776,7 +776,7 @@ function renderLog(){
 
 // ===== 事件横幅渲染 =====
 function renderEvent(){
-  // 延迟解析暂存的事件ID（EVENTS定义在文件靠后位置，需要try-catch避免TDZ）
+  // 延迟解析暂存的事件ID（EVENTS定义在文件靠后位置）
   try{
     if(window._savedEventId&&!currentEvent&&typeof EVENTS!=='undefined'){
       const found=EVENTS.find(e=>e.id===window._savedEventId);
@@ -784,30 +784,17 @@ function renderEvent(){
       window._savedEventId=null;
     }
   }catch(e){/* EVENTS未就绪，下次调用再解析 */}
-  const el=document.getElementById('eventBanner');
-  if(!el)return;
-  if(currentEvent){
-    el.style.display='';
-    el.className='event-banner';
-    el.innerHTML=`<span class="ev-emoji">${currentEvent.emoji}</span>
-      <span class="ev-name">${currentEvent.name}</span>
-      <span class="ev-desc">${currentEvent.desc}</span>
-      <span class="ev-type ${currentEvent.type}">${currentEvent.type==='normal'?'正常':'🎭无厘头'}${currentEvent.onMenuDesc?' · '+currentEvent.onMenuDesc:''}</span>`;
-  }else{
-    el.style.display='none';
-  }
-  // 更新订单区日期信息
+  // 更新订单区日期与事件信息
   const di=document.getElementById('dayInfo');
-  if(di){
-    if(currentEvent){
-      di.innerHTML=`📅 第${day}天 · ${currentEvent.emoji} ${currentEvent.name}`;
-      di.style.display='';
-    }else if(session){
-      di.innerHTML=`📅 第${day}天`;
-      di.style.display='';
-    }else{
-      di.style.display='none';
-    }
+  if(!di)return;
+  if(currentEvent&&session){
+    di.innerHTML=`📅 第${day}天 · ${currentEvent.emoji} ${currentEvent.name} ${currentEvent.onMenuDesc?'('+currentEvent.onMenuDesc+')':''}`;
+    di.style.display='';
+  }else if(session){
+    di.innerHTML=`📅 第${day}天`;
+    di.style.display='';
+  }else{
+    di.style.display='none';
   }
 }
 
