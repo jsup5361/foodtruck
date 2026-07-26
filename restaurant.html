@@ -286,7 +286,22 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .plot{min-height:50px;font-size:1.4rem}
 .shop-item{min-width:48px;padding:4px 6px}
 }
-</style>
+/* ===== 事件系统 ===== */
+.event-banner{width:100%;max-width:1200px;background:linear-gradient(135deg,#6c3483,#8e44ad);padding:6px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(108,52,131,.25);flex-wrap:wrap;min-height:32px;animation:evSlide .5s ease}
+@keyframes evSlide{0%{max-height:0;opacity:0;padding:0 16px}100%{max-height:40px;opacity:1;padding:6px 16px}}
+.event-banner .ev-emoji{font-size:1.1rem}
+.event-banner .ev-name{font-weight:700;color:#fff;font-size:.8rem}
+.event-banner .ev-desc{color:rgba(255,255,255,.8);font-size:.7rem;flex:1}
+.event-banner .ev-type{padding:1px 8px;border-radius:8px;font-size:.6rem;font-weight:700}
+.event-banner .ev-type.normal{background:rgba(255,255,255,.2);color:#d7bde2}
+.event-banner .ev-type.silly{background:#f39c12;color:#fff}
+.event-banner.none{background:linear-gradient(135deg,#566573,#7f8c8d);min-height:28px}
+.event-banner.none .ev-desc{color:rgba(255,255,255,.5);font-size:.65rem}
+@media(max-width:600px){
+.event-banner{padding:4px 10px;gap:4px}
+.event-banner .ev-desc{font-size:.6rem}
+}
+
 </head>
 <body>
 <script src="recipes.js"></script>
@@ -307,6 +322,14 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
     <button class="hbtn" style="font-size:.6rem;padding:3px 8px;border-color:rgba(255,180,180,.4);color:#ffcdd2" onclick="confirmReset()">🗑️</button>
   </div>
 </header>
+
+<!-- 事件横幅 -->
+<div class="event-banner none" id="eventBanner">
+  <span class="ev-emoji">📅</span>
+  <span class="ev-name">今日无事件</span>
+  <span class="ev-desc">平平淡淡的一天</span>
+  <span class="ev-type" style="display:none">—</span>
+</div>
 
 <div class="tab-bar"><button class="tab act" id="tabKitchen" onclick="switchTab('kitchen')">🚚 餐车</button><button class="tab" id="tabFarm" onclick="switchTab('farm')">🌾 农场</button></div>
 
@@ -448,6 +471,9 @@ function getLvProgress() { const l=getLv(), cur=LV_TH[l-1]||0, next=LV_TH[l]||0;
 
 // Load save - enhanced with timestamp
 try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizHour=s.bh!==undefined?s.bh:-1;day=totalDays||1;
+// 暂存事件ID字符串（EVENTS定义在后面，renderEvent解析）
+window._savedEventId=s.ev||null;
+eventDayCount=s.ed||0;
 // 新玩家保护：确保初始资金不低于50
 if(totalDays===0&&totalRevenue<50)totalRevenue=50;
 // 离线收益计算
@@ -464,7 +490,7 @@ updateDay();renderAchv();renderFarmInv();}}catch(e){}if(!farmSeeds['白萝卜'])
 // Auto-save every 10s
 setInterval(()=>{updateBizBtn();
   if(!session&&totalDays===0)return;
-  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,t:Date.now()};
+  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,ev:currentEvent?currentEvent.id:null,ed:eventDayCount,t:Date.now()};
   try{localStorage.setItem('foodtruck',JSON.stringify(data));}catch(e){}
 },10000);
 
@@ -516,6 +542,7 @@ renderOrders();
 renderServe();
 updateDay();
 updateBizBtn();
+renderEvent(); // 渲染事件横幅
 _hideAllModals(); // 页面初始化强制关闭所有弹窗，避免异常常显
 // 本地环境显示 debug 按钮
 if(isDebugEnv)document.getElementById('dbToggle').style.display='';
@@ -590,6 +617,20 @@ function startDay(){
   upH();bizTimer=setInterval(()=>{remain--;upH();if(remain<=0)endDay();},1000);
   renderOrders();renderServe();renderStoves();rcp.innerHTML='<div class="re">点击订单查看食谱</div>';
   addLog('🚀',`第${day}天开门营业！`);
+  // 事件触发：每3-5天随机触发
+  eventDayCount++;
+  if(!currentEvent&&eventDayCount>=3+Math.floor(Math.random()*3)){
+    const prev=currentEvent?currentEvent.id:null;
+    const pool=EVENTS.filter(e=>e.id!==prev);
+    currentEvent=pool[Math.floor(Math.random()*pool.length)];
+    eventDayCount=0;
+    addLog(currentEvent.emoji,`📅今日事件：${currentEvent.name} — ${currentEvent.desc}`);
+    toast(currentEvent.emoji,`📅 ${currentEvent.name}！${currentEvent.desc}`);
+  }else if(currentEvent){
+    addLog('📅','昨天的场景已结束，一切恢复正常');
+    currentEvent=null;
+  }
+  renderEvent();
   setTimeout(()=>spawnB(),600);
 }
 function upH(){const m=Math.floor(Math.max(0,remain)/60),s=Math.max(0,remain)%60;td.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;td.className='timer'+(remain<=60?' warn':'');}
@@ -616,9 +657,31 @@ function spawnO(){
   if(!session||orders.length>=3||doneToday>=15)return;
   const maxS=getLvMaxStars();
   const available=DNAMES.filter(n=>R.find(x=>x.n===n).s<=maxS);
-  const name=available[Math.floor(Math.random()*available.length)], r=R.find(x=>x.n===name);
+  let name;
+  if(currentEvent&&currentEvent.onOrderGen){
+    name=currentEvent.onOrderGen(available);
+    // 如果返回的是'🤮黑暗料理'，特殊处理
+    if(name==='🤮黑暗料理'){
+      // 随机取一个可用菜名作黑暗料理
+      const fakeName=available.length?available[Math.floor(Math.random()*available.length)]:'番茄炒蛋';
+      const r=R.find(x=>x.n===fakeName);
+      const to=65+Math.floor(Math.random()*46);
+      const o={id:nextId++,dish:'🤮'+fakeName,emoji:'🌀',cat:'黑暗料理',stars:1,ingredients:[...r.i],seasonings:[...r.se],total:to,rem:to,start:Date.now(),st:'waiting',tid:null,price:Math.floor(r.p*0.3),method:r.m,cookware:r.cw,isChaos:true};
+      orders.push(o);
+      o.tid=setInterval(()=>{try{if(!session)return;o.rem=Math.max(0,o.total-(Date.now()-o.start)/1000);if(o.rem<=0){o.rem=0;clearInterval(o.tid);orderFail(o);}else upO(o);}catch(e){}},200);
+      renderOrders();
+      requestAnimationFrame(()=>{const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('app');});
+      return;
+    }
+  }else{
+    name=available[Math.floor(Math.random()*available.length)];
+  }
+  const r=R.find(x=>x.n===name);
   const to=65+Math.floor(Math.random()*46);
-  const o={id:nextId++,dish:name,emoji:r.e,cat:r.c,stars:r.s,ingredients:[...r.i],seasonings:[...r.se],total:to,rem:to,start:Date.now(),st:'waiting',tid:null,price:r.p,method:r.m,cookware:r.cw};
+  // 事件效果：网红探店 → 倒计时+40%
+  let finalTo=to;
+  if(currentEvent&&currentEvent.orderTimeMult)finalTo=Math.round(to*currentEvent.orderTimeMult);
+  const o={id:nextId++,dish:name,emoji:r.e,cat:r.c,stars:r.s,ingredients:[...r.i],seasonings:[...r.se],total:finalTo,rem:finalTo,start:Date.now(),st:'waiting',tid:null,price:r.p,method:r.m,cookware:r.cw};
   orders.push(o);
   o.tid=setInterval(()=>{try{if(!session)return;o.rem=Math.max(0,o.total-(Date.now()-o.start)/1000);if(o.rem<=0){o.rem=0;clearInterval(o.tid);orderFail(o);}else upO(o);}catch(e){}},200);
   renderOrders();
@@ -642,6 +705,8 @@ function serveO(id){
   let idx=served.indexOf(o.dish);
   // 黑暗料理匹配：如果按菜名找不到，尝试用第一个黑暗料理
   if(idx===-1&&o.cutState==='worst')idx=served.findIndex(d=>!R.find(r=>r.n===d));
+  // 次元裂缝混沌订单：匹配任何上菜区的菜
+  if(idx===-1&&o.isChaos&&served.length>0)idx=0;
   if(idx===-1){toast('😅','上菜区没有对应的菜！');return;}
   served.splice(idx,1);
   // 切菜收益加成：full=+25%, penalty=-25%, partial/none=不变
@@ -649,6 +714,8 @@ function serveO(id){
   if(o.cutState==='full')bonus=1.25;
   else if(o.cutState==='penalty')bonus=0.75;
   else if(o.cutState==='worst')bonus=0.25;
+  // 事件效果：网红探店 → 收入×1.5
+  if(currentEvent&&currentEvent.serveRevenueMult)bonus*=currentEvent.serveRevenueMult;
   const finalPrice=Math.floor(o.price*bonus);
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
   const tag=bonus===1.25?' ⭐完美切块!':(bonus===0.75?' ⚠️未切块-25%':(bonus===0.25?' 🤮黑暗料理！':''));
@@ -779,11 +846,14 @@ function addIng(name){
     addLog('🛒',`花¥${cost}购买${name}（${qty}次使用）`);
     // 补货后继续消耗 1 次
   }
-  // 消耗 1 次使用次数
-  ingredientUses[name]--;
+  // 消耗使用次数（事件可翻倍消耗）
+  const costMult=currentEvent&&currentEvent.ingredientCostMult?currentEvent.ingredientCostMult:1;
+  ingredientUses[name]-=costMult;
+  if((ingredientUses[name]||0)<=0&&ingredientUses[name]!==0)delete ingredientUses[name];
   // 优先消耗农场份额，同步 farmInventory
   if((farmUses[name]||0)>0){
-    farmUses[name]--;
+    farmUses[name]-=costMult;
+    if((farmUses[name]||0)<0)farmUses[name]=0;
     const c=CROPS_DATA.find(x=>x.id===name);
     const mult=c?TIER_MULT[c.tier]||3:3;
     farmInventory[name]=Math.ceil((farmUses[name]||0)/mult);
@@ -882,11 +952,31 @@ function startCk(id){
     else if(any.length===0)cutState='penalty';
     else cutState='partial';
   }
+  // 事件效果：厨神附体 → 自动完美切块
+  if(currentEvent&&currentEvent.autoPerfectCut&&cutState!=='worst'){
+    cutState='full';
+    addLog('✨','厨神附体！自动完美切块！');
+  }
+  // 事件效果：美食节 → strictCut（partial视为penalty）
+  if(currentEvent&&currentEvent.strictCut&&cutState==='partial')cutState='penalty';
   s.cutState=cutState;
   if(cutState==='full')addLog('⭐',`灶${s.id}「${match.n}」完美切块！收益+25%`);
   else if(cutState==='penalty')addLog('⚠️',`灶${s.id}「${match.n}」未切块，收益-25%`);
   addLog('🍳',`灶${s.id}开始${match.m||''}「${match.n}」`);
-  selStove=null;s.st='active';s.dish=match.n;s.tot=match.t;s.rem=match.t;
+  selStove=null;s.st='active';s.dish=match.n;
+  // 事件效果：烹饪时间倍率
+  let cookTime=match.t;
+  if(currentEvent&&currentEvent.cookTimeMult)cookTime=Math.round(cookTime*currentEvent.cookTimeMult);
+  s.tot=cookTime;s.rem=cookTime;
+  // 事件效果：5%糊锅
+  if(currentEvent&&currentEvent.burnChance&&Math.random()<currentEvent.burnChance){
+    addLog('💥','灶'+s.id+'手滑翻车了！（厨神附体副作用）');
+    s.st='done';s.dish='💥糊锅'+match.n;s.cutState='worst';
+    s.tot=3;s.rem=3;
+    const start2=Date.now();
+    s.tid=setInterval(()=>{if(!session){clearInterval(s.tid);return;}s.rem=Math.max(0,3-(Date.now()-start2)/1000);if(s.rem<=0){s.rem=0;s.st='done';clearInterval(s.tid);selStove=null;}renderStoves();},200);
+    renderStoves();return;
+  }
   const start=Date.now();
   s.tid=setInterval(()=>{if(!session){clearInterval(s.tid);return;}s.rem=Math.max(0,match.t-(Date.now()-start)/1000);if(s.rem<=0){s.rem=0;s.st='done';clearInterval(s.tid);selStove=null;}renderStoves();},200);
   renderStoves();
@@ -951,6 +1041,10 @@ function coldMix(){
     else if(any.length===0)cutState='penalty';
     else cutState='partial';
   }
+  // 事件效果：厨神附体 → 自动完美切块
+  if(currentEvent&&currentEvent.autoPerfectCut&&cutState!=='worst')cutState='full';
+  // 事件效果：美食节 → strictCut
+  if(currentEvent&&currentEvent.strictCut&&cutState==='partial')cutState='penalty';
   if(cutState==='full')addLog('⭐','凉拌「'+match.n+'」完美切块！收益+25%');
   else if(cutState==='penalty')addLog('⚠️','凉拌「'+match.n+'」未切块，收益-25%');
   addLog('🥗',`凉拌「${match.n}」完成`);
@@ -983,9 +1077,10 @@ function doReset(){
   totalDays=0;totalRevenue=50;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
   farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};boardSelected=false;stoveChopped={};coldChopped={};
   lastBizHour=-1;session=false;orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;gameLog=[];
+  currentEvent=null;eventDayCount=0;
   stoves.forEach(s=>{s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.cutState='none';});
   // 重新渲染全部界面
-  upMoney();updateDay();updateBizBtn();renderOrders();renderServe();renderStoves();renderBowl();renderIG();renderAchv();renderFarmInv();renderLog();
+  upMoney();updateDay();updateBizBtn();renderOrders();renderServe();renderStoves();renderBowl();renderIG();renderAchv();renderFarmInv();renderLog();renderEvent();
   toast('🗑️','存档已重置');
 }
 
@@ -1004,7 +1099,7 @@ function endDay(){
   if(newLv>oldLv){toast('🎉',`升级啦！Lv.${newLv} ${LV_NAMES[newLv-1]}！新菜品解锁了！`);renderIG();}
   addLog('📊',`今日营收¥${revenue}，共${doneToday}单`);
   // Save
-  try{localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,t:Date.now()}));}catch(e){}
+  try{localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,ev:currentEvent?currentEvent.id:null,ed:eventDayCount,t:Date.now()}));}catch(e){}
 
   const total=doneToday+failed;
   const rate=total>0?(doneToday/total)*100:0;
@@ -1049,7 +1144,136 @@ function renderLog(){
   logList.innerHTML=gameLog.length?gameLog.map(l=>`<div class="log-item"><span class="le">${l.emoji}</span>${l.text}</div>`).join(''):'<div class="log-empty">暂无操作记录</div>';
 }
 
+// ===== 事件横幅渲染 =====
+function renderEvent(){
+  // 延迟解析暂存的事件ID（EVENTS定义在文件靠后位置，需要try-catch避免TDZ）
+  try{
+    if(window._savedEventId&&!currentEvent&&typeof EVENTS!=='undefined'){
+      const found=EVENTS.find(e=>e.id===window._savedEventId);
+      if(found)currentEvent=found;
+      window._savedEventId=null;
+    }
+  }catch(e){/* EVENTS未就绪，下次调用再解析 */}
+  const el=document.getElementById('eventBanner');
+  if(!el)return;
+  if(currentEvent){
+    el.className='event-banner';
+    el.innerHTML=`<span class="ev-emoji">${currentEvent.emoji}</span>
+      <span class="ev-name">${currentEvent.name}</span>
+      <span class="ev-desc">${currentEvent.desc}</span>
+      <span class="ev-type ${currentEvent.type}">${currentEvent.type==='normal'?'正常':'🎭无厘头'}${currentEvent.onMenuDesc?' · '+currentEvent.onMenuDesc:''}</span>`;
+  }else{
+    el.className='event-banner none';
+    el.innerHTML=`<span class="ev-emoji">📅</span>
+      <span class="ev-name">今日无事件</span>
+      <span class="ev-desc">平平淡淡的一天</span>
+      <span class="ev-type" style="display:none">—</span>`;
+  }
+}
+
 const EXCUSES=['客人想起家里煤气没关','客人突然打了个饱嗝','客人发现忘带钱包','客人接到电话：孩子在学校打架','客人说等得花都谢了','客人想起家里还炖着汤','客人看到隔壁在送免费试吃','客人收到老婆查岗短信','客人说是来借厕所的','客人突然对这家店过敏'];
+
+// ===== 日期事件系统 =====
+// 每3-5天随机触发一个事件，影响当日营业
+const EVENTS = [
+  // --- 5 个正常事件 ---
+  {
+    id:'construction',name:'工地出摊',emoji:'🏗️',type:'normal',
+    desc:'工人们饿坏了！今天高热量菜品畅销',
+    onOrderGen(available){
+      const hot=['猪肉','牛肉','排骨','五花肉'];
+      const hotDishes=available.filter(n=>R.find(r=>r.n===n).i.some(ig=>hot.includes(ig)));
+      const other=available.filter(n=>!hotDishes.includes(n));
+      const pool=Math.random()<0.5?hotDishes:other;
+      return pool.length?pool[Math.floor(Math.random()*pool.length)]:available[Math.floor(Math.random()*available.length)];
+    },
+    onMenuDesc:'🔥 高热量菜畅销'
+  },
+  {
+    id:'elderly',name:'养老院出摊',emoji:'🏥',type:'normal',
+    desc:'老人家牙口不好，炖菜焖菜更受欢迎，烹饪时间变长',
+    onOrderGen(available){
+      const stew=available.filter(n=>{const r=R.find(x=>x.n===n);return r&&r.m==='炖';});
+      if(stew.length&&Math.random()<0.6)return stew[Math.floor(Math.random()*stew.length)];
+      return available[Math.floor(Math.random()*available.length)];
+    },
+    cookTimeMult:1.1,
+    onMenuDesc:'🍲 炖菜为主 · 烹饪+10%'
+  },
+  {
+    id:'heatwave',name:'三伏天',emoji:'☀️',type:'normal',
+    desc:'天气热得冒烟！凉菜供不应求',
+    onOrderGen(available){
+      const cold=available.filter(n=>{const r=R.find(x=>x.n===n);return r&&r.cw===null;});
+      if(cold.length&&Math.random()<0.7)return cold[Math.floor(Math.random()*cold.length)];
+      return available[Math.floor(Math.random()*available.length)];
+    },
+    onMenuDesc:'🥗 凉菜订单暴增'
+  },
+  {
+    id:'school',name:'学校门口',emoji:'🏫',type:'normal',
+    desc:'学生们零花钱有限，便宜管饱的最爱',
+    onOrderGen(available){
+      const cheap=available.filter(n=>{const r=R.find(x=>x.n===n);return r&&r.s<=4;});
+      if(cheap.length&&Math.random()<0.7)return cheap[Math.floor(Math.random()*cheap.length)];
+      return available[Math.floor(Math.random()*available.length)];
+    },
+    onMenuDesc:'💰 低价菜为主'
+  },
+  {
+    id:'foodie',name:'美食节',emoji:'🍽️',type:'normal',
+    desc:'食客都是美食家！切菜必须完美，糊弄不过去',
+    onOrderGen(a){return a[Math.floor(Math.random()*a.length)];},
+    strictCut:true,
+    onMenuDesc:'🔪 切菜要求严格'
+  },
+  // --- 5 个无厘头事件 ---
+  {
+    id:'vegan',name:'素食游行',emoji:'🥬',type:'silly',
+    desc:'今天全是素食主义者！一滴荤腥都不碰',
+    onOrderGen(available){
+      const meatItems=['猪肉','牛肉','鸡腿','鸡翅','鸡胸','排骨','五花肉','虾仁','鱼肉','羊肉'];
+      const veggie=available.filter(n=>{const r=R.find(x=>x.n===n);return r&&!r.i.some(ig=>meatItems.includes(ig));});
+      return veggie.length?veggie[Math.floor(Math.random()*veggie.length)]:available[0];
+    },
+    onMenuDesc:'🌱 全素日！无肉菜'
+  },
+  {
+    id:'influencer',name:'网红探店',emoji:'📱',type:'silly',
+    desc:'抖音百万粉博主来了！客人先拍半小时再吃',
+    onOrderGen(a){return a[Math.floor(Math.random()*a.length)];},
+    orderTimeMult:1.4,
+    serveRevenueMult:1.5,
+    onMenuDesc:'📸 上菜收入×1.5 · 倒计时+40%'
+  },
+  {
+    id:'cat',name:'猫咪大闹',emoji:'🐱',type:'silly',
+    desc:'一只流浪猫闯进餐车！食材被踩得乱七八糟',
+    onOrderGen(a){return a[Math.floor(Math.random()*a.length)];},
+    ingredientCostMult:2,
+    onMenuDesc:'🐾 食材消耗×2'
+  },
+  {
+    id:'chefboost',name:'厨神附体',emoji:'✨',type:'silly',
+    desc:'今天手感爆棚自动完美切块！但5%概率手滑翻车',
+    onOrderGen(a){return a[Math.floor(Math.random()*a.length)];},
+    autoPerfectCut:true,
+    burnChance:0.05,
+    onMenuDesc:'⚡ 自动完美切 · 5%糊锅'
+  },
+  {
+    id:'portal',name:'次元裂缝',emoji:'🌀',type:'silly',
+    desc:'异世界客人看不懂菜单！随机乱点一气',
+    onOrderGen(available){
+      if(Math.random()<0.15)return '🤮黑暗料理';
+      return DNAMES[Math.floor(Math.random()*DNAMES.length)];
+    },
+    onMenuDesc:'👾 随机乱点！可能出怪菜'
+  }
+];
+let currentEvent=null;
+let eventDayCount=0;
+
 
 // ===== 烹饪小贴士 =====
 const TIPS=[
@@ -1383,7 +1607,7 @@ function renderAchv(){
 
 // ===== 导出/导入存档 =====
 function exportSave(){
-  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,sd:soundOn?1:0,t:Date.now()};
+  const data={d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,ev:currentEvent?currentEvent.id:null,ed:eventDayCount,sd:soundOn?1:0,t:Date.now()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -1400,9 +1624,12 @@ function importSave(e){
         totalDays=s.d;totalRevenue=s.r||0;totalCompleted=s.c;
         completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizHour=s.bh!==undefined?s.bh:-1;
         day=totalDays||1;updateDay();if(s.sd!==undefined)soundOn=!!s.sd;document.getElementById('soundBtn').textContent=soundOn?'🔊':'🔇';
-        localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,t:Date.now()}));
+        // 读取事件状态
+        currentEvent=null;eventDayCount=s.ed||0;
+        if(s.ev){const f=EVENTS.find(e=>e.id===s.ev);if(f)currentEvent=f;}
+        localStorage.setItem('foodtruck',JSON.stringify({d:totalDays,r:totalRevenue,c:totalCompleted,cd:completedDishes,ua:unlockedAchv,sk:stock,fi:farmInventory,fp:farmPlots,fs:farmSeeds,up:unlockedPlots,iu:ingredientUses,fu:farmUses,bh:lastBizHour,ev:currentEvent?currentEvent.id:null,ed:eventDayCount,t:Date.now()}));
         toast('✅','存档已导入！');
-        renderIG();renderOrders();renderServe();renderStoves();renderAchv();
+        renderIG();renderOrders();renderServe();renderStoves();renderAchv();renderEvent();
       }else throw new Error('格式无效');
     }catch(err){toast('❌','导入失败：文件格式不正确');}
   };
