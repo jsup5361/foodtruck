@@ -390,7 +390,7 @@ const IG_QTY = name => BULK_ITEMS.has(name) ? 30 : 5;
 // ===== State =====
 let orders=[], served=[], selOrder=null, completed=0, failed=0, revenue=0, session=false;
 let bizTimer=null, remain=0, doneToday=0, nextId=1, selStove=null;
-let day=1, totalDays=0, totalRevenue=1000, totalCompleted=0;
+let day=1, totalDays=0, totalRevenue=50, totalCompleted=0;
 let completedDishes=[], unlockedAchv={};
 let stock={};
 // ===== 农场系统 =====
@@ -431,6 +431,7 @@ let lastBizDate=''; // 上次营业的北京时间日期
 // 菜板系统：需要切的食材及份数
 const CUT_ITEMS={"番茄":3,"青椒":3,"黄瓜":3,"洋葱":3,"土豆":3,"白菜":3,"茄子":3,"西兰花":3,"豆角":3,"胡萝卜":3,"冬瓜":3,"莲藕":3,"山药":3,"蒜苔":3,"白萝卜":3,"南瓜":3};
 let cutBoard={name:null,need:0,done:0}; // 菜板状态
+let boardSelected=false; // 菜板是否被选中
 let stoveChopped={}; // {灶id: {食材名:true}} 记录每个炉灶中已切的食材
 let coldChopped={}; // 记录凉拌碗中已切的食材 {食材名:true}
 const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
@@ -516,7 +517,7 @@ _hideAllModals(); // 页面初始化强制关闭所有弹窗，避免异常常�
 // 本地环境显示 debug 按钮
 if(isDebugEnv)document.getElementById('dbToggle').style.display='';
 // 新玩家欢迎
-if(totalDays===0&&totalRevenue===1000)setTimeout(()=>toast('💰','欢迎来到餐车！初始资金 ¥1000，去农场种菜吧！'),800);
+if(totalDays===0&&totalRevenue===50)setTimeout(()=>toast('💰','欢迎来到餐车！初始资金 ¥50，去农场种菜吧！'),800);
 
 function renderIG(){
   const maxS=getLvMaxStars();
@@ -579,7 +580,7 @@ function startDay(){
   _hideAllModals();
   if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
   totalDays++;day=totalDays;updateDay();
-  orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;cutBoard={name:null,need:0,done:0};
+  orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;boardSelected=false;cutBoard={name:null,need:0,done:0};
   upMoney();renderBowl();
   remain=480;session=true;
   stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.perfect=undefined;});
@@ -717,32 +718,37 @@ function renderStoves(){
 }
 function _renderCutBoard(){
   const cb=cutBoard;
-  if(!cb.name) return '<div class="stv" style="background:linear-gradient(135deg,#fefcf8,#f5eee5);border-color:#d4c5a8;min-height:155px"><div class="stv-lb">🔪 菜板</div><div class="sph" style="padding:10px 0;font-size:.6rem;color:#b8a48c">点击需要切的食材<br>放到菜板上</div></div>';
+  const sel=boardSelected?' sel':'';
+  if(!cb.name) return '<div class="stv'+sel+'" style="background:linear-gradient(135deg,#fefcf8,#f5eee5);border-color:#d4c5a8;min-height:155px;cursor:pointer" onclick="selBoard()"><div class="stv-lb">🔪 菜板'+(boardSelected?' ✓':'')+'</div><div class="sph" style="padding:10px 0;font-size:.6rem;color:#b8a48c">选中菜板后点击食材<br>食材会先上菜板切块</div></div>';
   const pct=Math.min(100,cb.done/cb.need*100);
   const done=cb.done>=cb.need;
   const ig=cb.name;
-  return `<div class="stv" style="background:linear-gradient(135deg,#fefcf8,#f5eee5);border-color:${done?'#27ae60':'#e67e22'};min-height:155px">
-    <div class="stv-lb">🔪 菜板 · ${ig}</div>
-    <div style="font-size:1.8rem;margin:4px 0">${ALL_E[ig]||'🥬'}</div>
-    <div style="font-size:.65rem;color:#6b4c32">${done?'✅ 已切好！':('切菜 '+cb.done+'/'+cb.need)}</div>
-    <div style="height:6px;background:#e0d5c8;border-radius:3px;margin:4px 8px;overflow:hidden">
-      <div style="height:100%;width:${pct}%;background:${done?'#27ae60':'#e67e22'};border-radius:3px;transition:width .15s"></div>
-    </div>
-    <div style="display:flex;gap:4px;justify-content:center;margin-top:4px">
-      ${done?'':`<button class="sb ck" onclick="chopOnBoard()" style="font-size:.6rem">🔪 切</button>`}
-      ${done?`<button class="sb sv" onclick="boardToStove()" style="font-size:.6rem">🍳 入锅</button>`:''}
-      <button class="sb cl" onclick="clearBoard()" style="font-size:.6rem">🗑️</button>
-    </div>
-  </div>`;
+  return '<div class="stv'+sel+'" style="background:linear-gradient(135deg,#fefcf8,#f5eee5);border-color:'+(done?'#27ae60':(boardSelected?'#e67e22':'#e0d5c8'))+';min-height:155px;cursor:pointer" onclick="selBoard()">'
+    +'<div class="stv-lb">🔪 菜板 · '+ig+(boardSelected?' ✓':'')+'</div>'
+    +'<div style="font-size:1.8rem;margin:4px 0">'+(ALL_E[ig]||'🥬')+'</div>'
+    +'<div style="font-size:.65rem;color:#6b4c32">'+(done?'✅ 已切好！':('切菜 '+cb.done+'/'+cb.need))+'</div>'
+    +'<div style="height:6px;background:#e0d5c8;border-radius:3px;margin:4px 8px;overflow:hidden">'
+    +'<div style="height:100%;width:'+pct+'%;background:'+(done?'#27ae60':'#e67e22')+';border-radius:3px;transition:width .15s"></div>'
+    +'</div><div style="display:flex;gap:4px;justify-content:center;margin-top:4px">'
+    +(done?'':'<button class="sb ck" onclick="event.stopPropagation();chopOnBoard()" style="font-size:.6rem">🔪 切</button>')
+    +(done?'<button class="sb sv" onclick="event.stopPropagation();boardToStove()" style="font-size:.6rem">🍳 入锅</button>':'')
+    +'<button class="sb cl" onclick="event.stopPropagation();clearBoard()" style="font-size:.6rem">🗑️</button>'
+    +'</div></div>';
 }
 function selSt(id){
   const s=stoves.find(x=>x.id===id);
-  if(s&&s.st!=='idle'){if(selStove===id){selStove=null;coldBowl.sel=false;renderStoves();renderBowl();}return;}
-  selStove=selStove===id?null:id;coldBowl.sel=false;renderStoves();renderBowl();
+  if(s&&s.st!=='idle'){if(selStove===id){selStove=null;coldBowl.sel=false;}return;}
+  selStove=selStove===id?null:id;coldBowl.sel=false;boardSelected=false;renderStoves();renderBowl();
 }
-function setCw(id,c){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;s.cw=s.cw===c?null:c;if(s.cw!=='炒锅')s.mt=null;if(s.cw)addLog('🍳',`选了${s.cw}`);renderStoves();renderBowl();}
-function setMt(id,m){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;s.mt=s.mt===m?null:m;if(s.mt)addLog('🔥',`灶${s.id}选「${s.mt}」`);renderStoves();renderBowl();}
+function setCw(id,c){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;boardSelected=false;s.cw=s.cw===c?null:c;if(s.cw!=='炒锅')s.mt=null;if(s.cw)addLog('🍳',`选了${s.cw}`);renderStoves();renderBowl();}
+function setMt(id,m){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;boardSelected=false;s.mt=s.mt===m?null:m;if(s.mt)addLog('🔥',`灶${s.id}选「${s.mt}」`);renderStoves();renderBowl();}
 function clSt(id){const s=stoves.find(x=>x.id===id);if(!s)return;s.ig=[];renderStoves();}
+
+function selBoard(){
+  boardSelected=!boardSelected;
+  if(boardSelected){selStove=null;coldBowl.sel=false;}
+  renderStoves();renderBowl();
+}
 
 function addIng(name){
   // 开工前点击食材=补货
@@ -782,8 +788,8 @@ function addIng(name){
     stock[name]--;
     if(stock[name]<=0)delete stock[name];
   }
-  // 菜板模式：需要切的食材先上菜板（非凉拌碗模式）
-  if(!coldBowl.sel&&CUT_ITEMS[name]){
+  // 菜板模式：选中菜板时，需要切的食材先上菜板
+  if(boardSelected&&!coldBowl.sel&&CUT_ITEMS[name]){
     if(cutBoard.name){
       toast('🔪','菜板上还有 '+cutBoard.name+' 没切完！请先处理');renderStoves();renderIG();renderFarmInv();return;
     }
@@ -849,11 +855,12 @@ function startCk(id){
     }
   }
   if(!match){toast('🤔','食材/炊具不匹配！');return;}
-  // 完美烹饪检测：菜谱中所有需要切的食材是否都已切好
-  let perfect=true;
+  // 完美烹饪检测：菜谱中所有需要切的食材是否都已切好（至少有一种需要切）
+  let perfect=false,hasCut=false;
   for(const ig of s.ig){
-    if(CUT_ITEMS[ig]&&(!stoveChopped[s.id]||!stoveChopped[s.id][ig])){perfect=false;break;}
+    if(CUT_ITEMS[ig]){hasCut=true;if(!stoveChopped[s.id]||!stoveChopped[s.id][ig]){perfect=false;hasCut=false;break;}}
   }
+  if(hasCut)perfect=true;
   s.perfect=perfect;
   if(perfect)addLog('⭐',`灶${s.id}「${match.n}」完美烹饪！收益+25%`);
   addLog('🍳',`灶${s.id}开始${match.m||''}「${match.n}」`);
@@ -878,7 +885,7 @@ function svSt(id){
 }
 
 // ===== Cold Bowl =====
-function selBowl(){coldBowl.sel=!coldBowl.sel;if(coldBowl.sel)selStove=null;renderBowl();renderStoves();}
+function selBowl(){coldBowl.sel=!coldBowl.sel;if(coldBowl.sel){selStove=null;boardSelected=false;}renderBowl();renderStoves();}
 function renderBowl(){
   coldEl.classList.toggle('sel',coldBowl.sel);
   coldIgs.innerHTML=coldBowl.ig.length?coldBowl.ig.map(i=>ALL_E[i]||'🥬').join(''):'<span style="color:#b8a48c;font-size:.6rem">点击碗→加食材→凉拌</span>';
@@ -896,11 +903,12 @@ function coldMix(){
     if(cont.length===need.size&&cont.every(i=>need.has(i))){match=r;break;}
   }
   if(!match){toast('🤔','食材不匹配任何凉拌菜！');return;}
-  // 检测凉拌菜的完美烹饪（食材是否都切好了）
-  let perfect=true;
+  // 检测凉拌菜的完美烹饪（至少有一种需要切的食材且都已切好）
+  let perfect=false,hasCut=false;
   for(const ig of coldBowl.ig){
-    if(CUT_ITEMS[ig]&&!coldChopped[ig]){perfect=false;break;}
+    if(CUT_ITEMS[ig]){hasCut=true;if(!coldChopped[ig]){perfect=false;hasCut=false;break;}}
   }
+  if(hasCut)perfect=true;
   if(perfect)addLog('⭐','凉拌「'+match.n+'」完美切块！收益+25%');
   addLog('🥗',`凉拌「${match.n}」完成`);
   served.push(match.n);
@@ -924,7 +932,7 @@ function doReset(){
   const e=_resetEl();if(!e)return;
   e.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
-  totalDays=0;totalRevenue=1000;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
+  totalDays=0;totalRevenue=50;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
   farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};stoveChopped={};coldChopped={};
   upMoney();updateDay();renderOrders();renderServe();renderStoves();renderAchv();renderIG();
   toast('🗑️','存档已重置');
@@ -1299,7 +1307,7 @@ function renderFarmInv(){
 
 // ===== 成就系统 =====
 const ACHV=[
-  {id:'g100',icon:'🥉',name:'第一桶金',desc:'累计金币达100',check:()=>totalRevenue>=100},
+  {id:'g100',icon:'🥉',name:'第一桶金',desc:'第一次上菜成功',check:()=>totalCompleted>0},
   {id:'c10',icon:'🍳',name:'菜真的熟了！',desc:'制作10份菜',check:()=>totalCompleted>=10},
   {id:'v10',icon:'🔪',name:'牛刀小试',desc:'制作10个不同菜品',check:()=>new Set(completedDishes).size>=10},
   {id:'all',icon:'👑',name:'叫我厨神',desc:'制作全部9类菜品',check:()=>{const cats=new Set();R.forEach(r=>{if(completedDishes.includes(r.n))cats.add(r.c)});return cats.size>=9;}},
