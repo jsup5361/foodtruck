@@ -631,7 +631,7 @@ function orderFail(o){
     o.st='failed';failed++;addLog('😤',`「${o.dish}」超时`);toast('😤',EXCUSES[Math.floor(Math.random()*EXCUSES.length)]);
     const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('fail');
     // 食客愤怒弹窗
-    const ANGRY=['差评！','等太久了！','再也不来了！','退钱！','不新鲜啊！','味道不对！','上菜太慢了！','分量太少！','咸淡不合适！','糊了！'];
+    const ANGRY=['差评退钱！','等得我头发白了！','再也不来了！','花都谢了三轮了！','乌龟都比你快！','我外卖都到了还没上菜','隔壁都吃完了！','客服电话多少我要投诉','这速度是蜗牛附体','我先睡一觉再来'];
     if(el){
       const tip=document.createElement('div');tip.className='review-popup';tip.style.background='#ffe8e8';tip.style.color='#c0392b';tip.textContent=ANGRY[Math.floor(Math.random()*ANGRY.length)];el.style.position='relative';el.appendChild(tip);
       setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
@@ -657,8 +657,12 @@ function serveO(id){
   // 确保结算+定时器清理一定执行（隔离可能的异常）
   try{
     completed++;doneToday++;revenue+=finalPrice;totalRevenue+=finalPrice;upMoney();
-    const REVIEWS=['香疯了！','绝了！','太好吃了！','再来一份！','人间美味！','妈妈的味道！','五星好评！','感动到哭！','味道太棒了！','我要给十个赞！'];
-    const review=REVIEWS[Math.floor(Math.random()*REVIEWS.length)];
+    // 根据收益选择不同的无厘头回应（完美/正常/未切）
+    const PRAISE=['这刀工绝了！','米其林满分！','香到隔壁报警！','舌头要融化了！','我愿称之为最强！','再来十份都不够！','这味道能上春晚！','厨神本神在此！','好吃到螺旋升天！','吃完想骂家里饭难吃！'];
+    const NORMAL=['还行吧下次努力','差一点就封神了','中规中矩没毛病','能吃，还行吧','我妈做的也差不多','比食堂强点有限','不惊艳但管饱','味道在躲猫猫','就这？开个玩笑哈哈','再练练刀工吧！'];
+    const COMPLAIN=['刀工是被狗啃了吗','切的啥啊这是','食材在哭你知道吗','没切块差评退钱','我妈都比你切得好','这是喂猪的吗','卖相扣大分了','厨师睡着了吗','筷子都嫌弃这盘菜','切都不切好意思端上来'];
+    const pool=bonus===1.25?PRAISE:(bonus===0.75?COMPLAIN:NORMAL);
+    const review=pool[Math.floor(Math.random()*pool.length)];
     if(el){
       const tip=document.createElement('div');tip.className='review-popup';tip.textContent=review;el.style.position='relative';el.appendChild(tip);
       setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
