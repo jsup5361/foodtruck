@@ -291,7 +291,34 @@ setTimeout(() => {
       <td class="num">¥${cost.toFixed(1)}</td><td class="num">×${mult}</td></tr>`;
   });
   document.getElementById('dataTable').innerHTML = html;
-}, 100);
+<div class="card full"><h2>🎮 游戏常数速查</h2><div class="stats-row">
+<div class="stat-box"><div class="num">50</div><div class="label">初始资金 ¥</div></div>
+<div class="stat-box"><div class="num">整点</div><div class="label">营业刷新制</div></div>
+<div class="stat-box"><div class="num">15</div><div class="label">每日上限(道)</div></div>
+<div class="stat-box"><div class="num">5/10/20/40m</div><div class="label">农场成熟时间</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+<div>
+<strong>📈 等级阈值</strong><br>
+<span style="font-size:.7rem">
+Lv1 帮厨: 0 &nbsp; Lv2 学徒: 5 &nbsp; Lv3 厨工: 12<br>
+Lv4 初级: 22 &nbsp; Lv5 中级: 35 &nbsp; Lv6 高级: 50<br>
+Lv7 厨师长: 68 &nbsp; Lv8 主厨: 88<br>
+Lv9 行政主厨: 110 &nbsp; Lv10 厨神: 135</span></div>
+<div>
+<strong>🔪 需切菜食材 (×3刀)</strong><br>
+<span style="font-size:.7rem">番茄 青椒 黄瓜 洋葱 土豆 白菜<br>茄子 西兰花 豆角 胡萝卜 冬瓜<br>莲藕 山药 蒜苔 白萝卜 南瓜</span></div>
+<div>
+<strong>💰 收益规则</strong><br>
+<span style="font-size:.7rem">
+⭐ 全部切好 → +25%<br>
+— 无需切/切部分 → 不变<br>
+⚠️ 有需切但没切 → -25%<br>
+🤮 食材不匹配 → 仅25%</span></div>
+<div>
+<strong>⏰ 营业时间</strong><br>
+<span style="font-size:.7rem">每整点刷新（0~23时）<br>相邻小时可连开<br>旧制：北京时间12pm<br>新制：现实整点小时</span></div>
+</div></div>`, 100);
 </script>
 </body>
 </html>
