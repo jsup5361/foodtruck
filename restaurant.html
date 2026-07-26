@@ -734,7 +734,7 @@ function _renderCutBoard(){
     +'<div style="height:100%;width:'+pct+'%;background:'+(done?'#27ae60':'#e67e22')+';border-radius:3px;transition:width .15s"></div>'
     +'</div><div style="display:flex;gap:4px;justify-content:center;margin-top:4px">'
     +(done?'':'<button class="sb ck" onclick="event.stopPropagation();chopOnBoard()" style="font-size:.6rem">🔪 切</button>')
-    +(done?'<button class="sb sv" onclick="event.stopPropagation();boardToStove()" style="font-size:.6rem">🍳 入锅</button>':'')
+    +(cb.done>0?'<button class="sb sv" onclick="event.stopPropagation();boardToStove()" style="font-size:.6rem">🍳 入锅/入碗</button>':'')
     +'<button class="sb cl" onclick="event.stopPropagation();clearBoard()" style="font-size:.6rem">🗑️</button>'
     +'</div></div>';
 }
@@ -745,7 +745,7 @@ function selSt(id){
 }
 function setCw(id,c){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;boardSelected=false;s.cw=s.cw===c?null:c;if(s.cw!=='炒锅')s.mt=null;if(s.cw)addLog('🍳',`选了${s.cw}`);renderStoves();renderBowl();}
 function setMt(id,m){const s=stoves.find(x=>x.id===id);if(!s||s.st!=='idle')return;selStove=id;coldBowl.sel=false;boardSelected=false;s.mt=s.mt===m?null:m;if(s.mt)addLog('🔥',`灶${s.id}选「${s.mt}」`);renderStoves();renderBowl();}
-function clSt(id){const s=stoves.find(x=>x.id===id);if(!s)return;s.ig=[];renderStoves();}
+function clSt(id){const s=stoves.find(x=>x.id===id);if(!s)return;s.ig=[];delete stoveChopped[s.id];renderStoves();}
 
 function selBoard(){
   boardSelected=!boardSelected;
@@ -820,12 +820,12 @@ function chopOnBoard(){
   renderStoves();
 }
 function boardToStove(){
-  if(!cutBoard.name||cutBoard.done<cutBoard.need)return;
+  if(!cutBoard.name||cutBoard.done<=0)return;
   // 凉拌碗模式 → 入碗
   if(coldBowl.sel){
     coldBowl.ig.push(cutBoard.name);
-    coldChopped[cutBoard.name]=true;
-    addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进凉拌碗（已切好）`);
+    coldChopped[cutBoard.name]=cutBoard.done; // 记录实际切了几刀
+    addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进凉拌碗${cutBoard.done>=cutBoard.need?'（已切好）':'(切了'+cutBoard.done+'/'+cutBoard.need+')'}`);
     cutBoard={name:null,need:0,done:0};
     renderStoves();renderIG();renderFarmInv();renderBowl();
     return;
@@ -836,8 +836,8 @@ function boardToStove(){
   if(!s.cw){toast('🍳','请先选炊具！');return;}
   s.ig.push(cutBoard.name);
   if(!stoveChopped[s.id])stoveChopped[s.id]={};
-  stoveChopped[s.id][cutBoard.name]=true;
-  addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进灶${s.id}（已切好）`);
+  stoveChopped[s.id][cutBoard.name]=cutBoard.done; // 记录实际切了几刀
+  addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进灶${s.id}${cutBoard.done>=cutBoard.need?'（已切好）':'(切了'+cutBoard.done+'/'+cutBoard.need+')'}`);
   cutBoard={name:null,need:0,done:0};
   renderStoves();renderIG();renderFarmInv();
 }
@@ -858,13 +858,14 @@ function startCk(id){
     }
   }
   if(!match){toast('🤔','食材/炊具不匹配！');return;}
-  // 切菜状态：none=无需要切, penalty=需要切但没切, partial=切了部分, full=全部切好
+  // 切菜状态：比较实际刀数vs需要刀数
   let cutState='none';
   const needCut=s.ig.filter(ig=>CUT_ITEMS[ig]);
   if(needCut.length>0){
-    const chopped=needCut.filter(ig=>stoveChopped[s.id]&&stoveChopped[s.id][ig]);
+    const chopped=needCut.filter(ig=>stoveChopped[s.id]&&(stoveChopped[s.id][ig]||0)>=CUT_ITEMS[ig]);
+    const any=needCut.filter(ig=>stoveChopped[s.id]&&(stoveChopped[s.id][ig]||0)>0);
     if(chopped.length===needCut.length)cutState='full';
-    else if(chopped.length===0)cutState='penalty';
+    else if(any.length===0)cutState='penalty';
     else cutState='partial';
   }
   s.cutState=cutState;
@@ -910,13 +911,14 @@ function coldMix(){
     if(cont.length===need.size&&cont.every(i=>need.has(i))){match=r;break;}
   }
   if(!match){toast('🤔','食材不匹配任何凉拌菜！');return;}
-  // 切菜检测凉拌版
+  // 切菜检测凉拌版：比较实际刀数
   let cutState='none';
   const needCut=coldBowl.ig.filter(ig=>CUT_ITEMS[ig]);
   if(needCut.length>0){
-    const chopped=needCut.filter(ig=>coldChopped[ig]);
+    const chopped=needCut.filter(ig=>(coldChopped[ig]||0)>=CUT_ITEMS[ig]);
+    const any=needCut.filter(ig=>(coldChopped[ig]||0)>0);
     if(chopped.length===needCut.length)cutState='full';
-    else if(chopped.length===0)cutState='penalty';
+    else if(any.length===0)cutState='penalty';
     else cutState='partial';
   }
   if(cutState==='full')addLog('⭐','凉拌「'+match.n+'」完美切块！收益+25%');
