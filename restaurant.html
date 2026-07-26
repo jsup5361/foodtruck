@@ -324,7 +324,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
   <div class="log-pnl"><div class="log-hdr">📝 操作日志</div><div class="log-list" id="logList"><div class="log-empty">暂无操作记录</div></div></div>
   <div class="pnl rcp-pnl" style="display:flex;flex-direction:column"><div class="pt">📖 食谱</div><div class="rc" id="rcp" style="flex:1;overflow-y:auto"><div class="re">点击订单查看食谱</div></div></div>
   <div class="achv-pnl"><div class="pt">🏆 成就</div><div class="achv-grid" id="achvGrid"></div></div>
-  <div class="tip-pnl"><div class="pt" style="margin-bottom:4px">💡 烹饪小贴士</div><div class="tip-area" id="tipArea" style="flex:1;min-height:40px"><div class="re">加载中...</div></div></div>
+  <div class="tip-pnl"><div class="pt" style="margin-bottom:4px">💡 烹饪小贴士</div><div class="tip-area" id="tipArea" style="flex:1;min-height:40px"><div class="re">🥩 切牛肉要逆着纹理切，切猪肉要顺着纹理切，口感更好。</div></div></div>
 </div>
 <div class="tc" id="tc"></div>
 
@@ -619,7 +619,14 @@ function spawnO(){
   requestAnimationFrame(()=>{const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('app');});
 }
 function upO(o){const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(!el)return;const t=el.querySelector('.ot');if(t){t.textContent=`⏱ ${Math.max(0,o.rem).toFixed(0)}s`;t.className='ot'+(o.rem<=10?' warn':'');}const b=el.querySelector('.opb');if(b){const p=o.total>0?Math.min(100,(o.total-o.rem)/o.total*100):0;b.style.width=p+'%';}el.classList.toggle('urg',o.rem<=10);}
-function orderFail(o){o.st='failed';failed++;addLog('😤',`「${o.dish}」超时`);toast('😤',EXCUSES[Math.floor(Math.random()*EXCUSES.length)]);const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('fail');setTimeout(()=>{orders=orders.filter(x=>x.id!==o.id);renderOrders();if(session)spawnB();},800);}
+function orderFail(o){
+  try{
+    o.st='failed';failed++;addLog('😤',`「${o.dish}」超时`);toast('😤',EXCUSES[Math.floor(Math.random()*EXCUSES.length)]);
+    const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('fail');
+  }catch(e){}
+  // 无论上面是否有异常，都要移除订单
+  setTimeout(()=>{try{orders=orders.filter(x=>x.id!==o.id);renderOrders();if(session)spawnB();}catch(e){}},800);
+}
 
 // ===== Serve Order =====
 function serveO(id){
@@ -793,6 +800,14 @@ function chopOnBoard(){
 }
 function boardToStove(){
   if(!cutBoard.name||cutBoard.done<cutBoard.need)return;
+  // 凉拌碗模式 → 入碗
+  if(coldBowl.sel){
+    coldBowl.ig.push(cutBoard.name);
+    addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进凉拌碗（已切好）`);
+    cutBoard={name:null,need:0,done:0};
+    renderStoves();renderIG();renderFarmInv();renderBowl();
+    return;
+  }
   const s=stoves.find(x=>x.id===selStove);
   if(!s){toast('👆','请先点击一个炉灶！');return;}
   if(s.st!=='idle'){toast('🚫','这个灶正在工作中！');return;}
@@ -986,11 +1001,12 @@ const TIPS=[
 const tipArea=document.getElementById('tipArea');
 let tipIdx=0;
 function showTip(){
+  if(!tipArea)return;
   tipArea.innerHTML=`<div style="padding:4px 0">${TIPS[tipIdx]}</div>`;
   tipIdx=(tipIdx+1)%TIPS.length;
 }
-showTip();
-setInterval(showTip,20000);
+if(tipArea)showTip();
+if(tipArea)setInterval(showTip,20000);
 
 // ===== 调试模式（本地环境可用，push 版本隐藏）=====
 const isDebugEnv = location.hostname==='localhost'||location.protocol==='file:'||location.hostname==='127.0.0.1';
