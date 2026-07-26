@@ -26,7 +26,7 @@
   </div>
 </header>
 
-<div class="event-banner none" id="eventBanner">
+<div class="event-banner none" id="eventBanner" style="display:none">
   <span class="ev-emoji">📅</span>
   <span class="ev-name">今日无事件</span>
   <span class="ev-desc">平平淡淡的一天</span>
@@ -42,7 +42,7 @@
 <div class="sm" id="smOver"><div class="sm-c"><div style="font-size:3rem;margin:4px 0" id="smEmoji">🍜</div><h2>📊 第 <span id="smDay">1</span> 天 打烊</h2><div class="bn" id="smCount">0</div><div style="font-size:.85rem;color:#6b4c32;font-weight:600">单完成</div><div class="mn" id="smRev">¥0</div><div class="sb2" id="smSub"></div><div class="rb"><div class="rf" id="smRate" style="width:0%"></div></div><div class="sm-r" id="smFail">失败: 0 单</div><div class="sm-r" id="smLvInfo"></div><div class="sm-r" id="smTotal">累计 0 天 · 总收入 ¥0</div><button class="sbtn" onclick="nextDay()">🌅 下一天</button></div></div>
 
 <div class="game-grid">
-  <div class="pnl orders-pnl"><div class="pt">📋 订单 <span id="oc" style="color:#8b7355;font-weight:400;font-size:.75rem"></span></div><div id="ol"><div style="color:#b8a48c;font-size:.75rem;padding:20px 0;text-align:center">点击「开工」开始营业</div></div></div>
+  <div class="pnl orders-pnl"><div class="pt">📋 订单 <span id="oc" style="color:#8b7355;font-weight:400;font-size:.75rem"></span></div><div id="dayInfo" style="font-size:.65rem;color:#8b7355;padding:2px 0 4px;display:none"></div><div id="ol"><div style="color:#b8a48c;font-size:.75rem;padding:20px 0;text-align:center">点击「开工」开始营业</div></div></div>
   <div class="pnl sv-pnl"><div class="pt">🍽️ 上菜区</div><div class="sv-box" id="svBox"><span style="color:#b8a48c;font-size:.7rem">出锅后的菜品在这里</span></div></div>
   <div class="pnl ig-pnl"><div class="pt">🥬 备菜区 <span id="stoveHint" style="color:#b8a48c;font-weight:400;font-size:.65rem">点炉灶→选炊具→加食材</span></div><div class="sr"><div class="sz" style="width:62px;flex-shrink:0;padding:4px"><div id="seasWrap"></div><div id="herbsWrap"></div></div><div class="sz" style="flex:1;overflow-y:auto;max-height:260px"><div id="meatWrap"></div><div id="vegWrap"></div><div id="seafoodWrap"></div><div id="eggtofuWrap"></div><div id="stapleWrap"></div></div></div></div>
   <div class="pnl stv-pnl"><div class="pt">🔥 炉灶 · 烹饪</div><div class="sr2" id="stovesRow"></div><div class="cold-mod" id="coldMod"><div class="cold-bowl" id="coldBowl" onclick="selBowl()">🥣</div><div class="cold-igs" id="coldIgs"><span style="color:#b8a48c;font-size:.55rem">点击碗→加食材→凉拌</span></div><button class="cold-btn sv" id="coldBtn" onclick="coldMix()" disabled>🥗 凉拌</button><button class="cold-btn cl" id="coldClear" onclick="clBowl()" disabled>🗑️</button></div></div>

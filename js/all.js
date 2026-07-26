@@ -787,17 +787,27 @@ function renderEvent(){
   const el=document.getElementById('eventBanner');
   if(!el)return;
   if(currentEvent){
+    el.style.display='';
     el.className='event-banner';
     el.innerHTML=`<span class="ev-emoji">${currentEvent.emoji}</span>
       <span class="ev-name">${currentEvent.name}</span>
       <span class="ev-desc">${currentEvent.desc}</span>
       <span class="ev-type ${currentEvent.type}">${currentEvent.type==='normal'?'正常':'🎭无厘头'}${currentEvent.onMenuDesc?' · '+currentEvent.onMenuDesc:''}</span>`;
   }else{
-    el.className='event-banner none';
-    el.innerHTML=`<span class="ev-emoji">📅</span>
-      <span class="ev-name">今日无事件</span>
-      <span class="ev-desc">平平淡淡的一天</span>
-      <span class="ev-type" style="display:none">—</span>`;
+    el.style.display='none';
+  }
+  // 更新订单区日期信息
+  const di=document.getElementById('dayInfo');
+  if(di){
+    if(currentEvent){
+      di.innerHTML=`📅 第${day}天 · ${currentEvent.emoji} ${currentEvent.name}`;
+      di.style.display='';
+    }else if(session){
+      di.innerHTML=`📅 第${day}天`;
+      di.style.display='';
+    }else{
+      di.style.display='none';
+    }
   }
 }
 
