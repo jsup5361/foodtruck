@@ -509,6 +509,7 @@ renderOrders();
 renderServe();
 updateDay();
 updateBizBtn();
+_hideAllModals(); // 页面初始化强制关闭所有弹窗，避免异常常显
 // 本地环境显示 debug 按钮
 if(isDebugEnv)document.getElementById('dbToggle').style.display='';
 // 新玩家欢迎
