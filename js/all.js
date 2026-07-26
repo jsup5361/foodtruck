@@ -970,15 +970,15 @@ function toggleDebug(){
   document.getElementById('dbToggle').classList.toggle('on',debugMode);
   document.getElementById('dbPanel').classList.toggle('show',debugMode);
 }
-function debugFF(hours){
+function debugFF(mins){
   if(!debugMode||!isDebugEnv)return;
-  const ms=hours*3600*1000;
+  const ms=mins*60*1000;
   let count=0;
   farmPlots.forEach(p=>{
     if(p.crop&&p.plantedAt){p.plantedAt-=ms;count++;}
   });
   renderFarm();renderFarmInv();
-  toast('⏩',`快进 ${hours} 小时，影响 ${count} 块农田`);
+  toast('⏩',`快进 ${mins} 分钟，影响 ${count} 块农田`);
 }
 function debugRipe(){
   if(!debugMode||!isDebugEnv)return;
