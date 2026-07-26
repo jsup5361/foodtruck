@@ -176,7 +176,46 @@ _hideAllModals(); // 页面初始化强制关闭所有弹窗，避免异常常�
 // 本地环境显示 debug 按钮
 if(isDebugEnv)document.getElementById('dbToggle').style.display='';
 // 新玩家欢迎
-if(totalDays===0&&totalRevenue===50)setTimeout(()=>toast('💰','欢迎来到餐车！初始资金 ¥50，去农场种菜吧！'),800);
+if(totalDays===0&&totalRevenue===50){
+  setTimeout(()=>toast('💰','欢迎来到餐车！初始资金 ¥50，去农场种菜吧！'),800);
+  // 新手引导：仅首次访问
+  if(!localStorage.getItem('tutDone'))setTimeout(showTutorial,1500);
+}
+
+// ===== 新手引导 =====
+const TUT_STEPS=[
+  {icon:'🚀',title:'开店接单',text:'点击顶部「开工」按钮开始营业，订单会自动出现。'},
+  {icon:'🔥',title:'烹饪出餐',text:'选中炉灶→选炊具→加食材→🔥烹饪，完成后出锅到上菜区。'},
+  {icon:'🍽️',title:'上菜完成',text:'订单倒计时内，点击「上菜」完成订单赚取收入。'},
+  {icon:'🌾',title:'农场种菜',text:'切换「农场」Tab，买种子→种植→收获，自给自足。'},
+  {icon:'📅',title:'随机事件',text:'每几天会有随机场景事件影响当日营业，留意订单区提示。'}
+];
+let tutStep=0;
+function showTutorial(){
+  const ol=document.getElementById('tutOverlay');if(!ol)return;
+  ol.classList.add('show');tutStep=0;renderTutStep();
+}
+function renderTutStep(){
+  const box=document.getElementById('tutBox');if(!box)return;
+  const s=TUT_STEPS[tutStep];
+  const isFirst=tutStep===0,isLast=tutStep===TUT_STEPS.length-1;
+  box.innerHTML=
+    `<div class="tut-icon">${s.icon}</div>
+    <div class="tut-title">${s.title}</div>
+    <div class="tut-text">${s.text}</div>
+    <div class="tut-step">${tutStep+1} / ${TUT_STEPS.length}</div>
+    <div class="tut-btns">
+      ${isFirst?'':`<button class="tut-prev" onclick="tutPrev()">← 上一步</button>`}
+      ${isLast?`<button class="tut-done" onclick="tutDone()">✓ 开始游戏</button>`
+        :`<button class="tut-next" onclick="tutNext()">下一步 →</button>`}
+    </div>`;
+}
+function tutNext(){tutStep++;renderTutStep();}
+function tutPrev(){tutStep--;renderTutStep();}
+function tutDone(){
+  document.getElementById('tutOverlay').classList.remove('show');
+  try{localStorage.setItem('tutDone','1');}catch(e){}
+}
 
 function renderIG(){
   const maxS=getLvMaxStars();
