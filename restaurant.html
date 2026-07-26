@@ -147,8 +147,8 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .tt .tt2{font-size:.9rem;font-weight:600;color:#3d2b1a;line-height:1.4}
 @keyframes tp{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
 /* 食客反馈弹窗 */
-.review-popup{position:absolute;top:-28px;right:4px;background:#fff8e1;color:#856404;padding:3px 10px;border-radius:8px;font-size:.7rem;font-weight:700;z-index:10;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.1);pointer-events:none;animation:reviewFade 2.2s ease forwards}
-@keyframes reviewFade{0%{opacity:0;transform:translateY(6px) scale(.85)}15%{opacity:1;transform:translateY(0) scale(1)}65%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(.9)}}
+.review-popup{position:absolute;top:2px;right:30px;background:#fff8e1;color:#856404;padding:2px 8px;border-radius:8px;font-size:.6rem;font-weight:700;z-index:10;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.1);pointer-events:none;animation:reviewFade 2.2s ease forwards}
+@keyframes reviewFade{0%{opacity:0;transform:translateY(3px) scale(.85)}15%{opacity:1;transform:translateY(0) scale(1)}65%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-10px) scale(.9)}}}
 /* Confirm */
 .cf{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:101;justify-content:center;align-items:center}
 .cf.act{display:flex}
@@ -432,6 +432,7 @@ let lastBizDate=''; // 上次营业的北京时间日期
 const CUT_ITEMS={"番茄":3,"青椒":3,"黄瓜":3,"洋葱":3,"土豆":3,"白菜":3,"茄子":3,"西兰花":3,"豆角":3,"胡萝卜":3,"冬瓜":3,"莲藕":3,"山药":3,"蒜苔":3,"白萝卜":3,"南瓜":3};
 let cutBoard={name:null,need:0,done:0}; // 菜板状态
 let stoveChopped={}; // {灶id: {食材名:true}} 记录每个炉灶中已切的食材
+let coldChopped={}; // 记录凉拌碗中已切的食材 {食材名:true}
 const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
 const coldBowl={ig:[],sel:false};
 
@@ -577,7 +578,7 @@ function startDay(){
   upMoney();renderBowl();
   remain=480;session=true;
   stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.perfect=undefined;});
-  stoveChopped={};
+  stoveChopped={};coldChopped={};
   sBtn.textContent='🟢 营业中';sBtn.className='hbtn open';ecBtn.style.display='inline-block';
   upH();bizTimer=setInterval(()=>{remain--;upH();if(remain<=0)endDay();},1000);
   renderOrders();renderServe();renderStoves();rcp.innerHTML='<div class="re">点击订单查看食谱</div>';
@@ -623,6 +624,12 @@ function orderFail(o){
   try{
     o.st='failed';failed++;addLog('😤',`「${o.dish}」超时`);toast('😤',EXCUSES[Math.floor(Math.random()*EXCUSES.length)]);
     const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('fail');
+    // 食客愤怒弹窗
+    const ANGRY=['差评！','等太久了！','再也不来了！','退钱！','不新鲜啊！','味道不对！','上菜太慢了！','分量太少！','咸淡不合适！','糊了！'];
+    if(el){
+      const tip=document.createElement('div');tip.className='review-popup';tip.style.background='#ffe8e8';tip.style.color='#c0392b';tip.textContent=ANGRY[Math.floor(Math.random()*ANGRY.length)];el.style.position='relative';el.appendChild(tip);
+      setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
+    }
   }catch(e){}
   // 无论上面是否有异常，都要移除订单
   setTimeout(()=>{try{orders=orders.filter(x=>x.id!==o.id);renderOrders();if(session)spawnB();}catch(e){}},800);
@@ -803,6 +810,7 @@ function boardToStove(){
   // 凉拌碗模式 → 入碗
   if(coldBowl.sel){
     coldBowl.ig.push(cutBoard.name);
+    coldChopped[cutBoard.name]=true;
     addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进凉拌碗（已切好）`);
     cutBoard={name:null,need:0,done:0};
     renderStoves();renderIG();renderFarmInv();renderBowl();
@@ -872,7 +880,7 @@ function renderBowl(){
   coldBtn.disabled=coldBowl.ig.length<1;
   coldClear.disabled=coldBowl.ig.length<1;
 }
-function clBowl(){coldBowl.ig=[];renderBowl();}
+function clBowl(){coldBowl.ig=[];coldChopped={};renderBowl();}
 function coldMix(){
   if(!coldBowl.ig.length)return;
   const cont=coldBowl.ig.map(i=>i);
@@ -883,10 +891,16 @@ function coldMix(){
     if(cont.length===need.size&&cont.every(i=>need.has(i))){match=r;break;}
   }
   if(!match){toast('🤔','食材不匹配任何凉拌菜！');return;}
+  // 检测凉拌菜的完美烹饪（食材是否都切好了）
+  let perfect=true;
+  for(const ig of coldBowl.ig){
+    if(CUT_ITEMS[ig]&&!coldChopped[ig]){perfect=false;break;}
+  }
+  if(perfect)addLog('⭐','凉拌「'+match.n+'」完美切块！收益+25%');
   addLog('🥗',`凉拌「${match.n}」完成`);
   served.push(match.n);
-  orders.forEach(o=>{if(o.dish===match.n&&o.st==='waiting')o.st='cooking';});
-  coldBowl.ig=[];coldBowl.sel=false;renderBowl();renderServe();renderOrders();
+  orders.forEach(o=>{if(o.dish===match.n&&o.st==='waiting'){o.st='cooking';o.perfect=perfect;}});
+  coldBowl.ig=[];coldBowl.sel=false;coldChopped={};renderBowl();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===match.n&&o.st==='cooking')o.st='done';});
   renderOrders();
 }
@@ -904,7 +918,7 @@ function doReset(){
   e.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
   totalDays=0;totalRevenue=1000;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
-  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};stoveChopped={};
+  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};stoveChopped={};coldChopped={};
   upMoney();updateDay();renderOrders();renderServe();renderStoves();renderAchv();renderIG();
   toast('🗑️','存档已重置');
 }
@@ -1044,7 +1058,7 @@ function switchTab(tab){
   document.getElementById('tabFarm').className='tab'+(tab==='farm'?' act':'');
   document.querySelector('.game-grid').style.display=tab==='kitchen'?'grid':'none';
   document.getElementById('farmView').className='farm-view'+(tab==='farm'?' show':'');
-  if(tab==='farm'){renderFarm();startFarmTimer();}else{stopFarmTimer();deselectSeed();}
+  if(tab==='farm'){renderFarm();startFarmTimer();}else{stopFarmTimer();deselectSeed();showTip();}
 }
 function startFarmTimer(){
   if(farmTimerId)return;
