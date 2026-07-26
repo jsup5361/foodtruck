@@ -3,18 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍜 厨娘朱莉的餐车</title>
-<meta http-equiv="refresh" content="0;url=restaurant.html">
-<style>
-  body{background:#fdf6ed;font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;flex-direction:column;gap:12px;color:#3d2b1a}
-  a{font-size:1.2rem;color:#e67e22;text-decoration:none;font-weight:600;padding:12px 24px;border:2px solid #e67e22;border-radius:12px;transition:all .2s}
-  a:hover{background:#e67e22;color:#fff}
-</style>
+<title>厨娘朱莉的餐车</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div style="font-size:3rem">🚚</div>
-  <h1>厨娘朱莉的餐车</h1>
-  <p style="color:#8b7355">正在跳转游戏...</p>
-  <a href="restaurant.html">进入游戏</a>
+<script src="recipes.js"></script>
+
+<header class="header">
+  <div class="hl"><span class="ti">🚚</span><h1>厨娘朱莉的餐车</h1></div>
+  <div class="hr">
+    <span class="timer" id="timerD">--:--</span>
+    <span style="color:#ffd700;font-size:.7rem;font-weight:600" id="moneyD">💰 ¥0</span>
+    <span style="color:rgba(255,255,255,.7);font-size:.65rem;font-weight:600" id="lvDisplay">Lv.1 帮厨</span>
+    <span id="dayD" style="color:rgba(255,255,255,.5);font-size:.65rem;"></span>
+    <button class="hbtn danger" id="ecBtn" onclick="confirmEC()" style="display:none">⏰ 打烊</button>
+    <button class="hbtn ready" id="statusBtn" onclick="startDay()">🚀 开工</button>
+    <button class="hbtn" style="font-size:.6rem;padding:3px 6px;border-color:rgba(255,255,255,.3)" id="soundBtn" onclick="toggleSound()">🔊</button>
+    <button class="hbtn" style="font-size:.6rem;padding:3px 8px;border-color:rgba(255,255,255,.3)" onclick="exportSave()">💾</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importSave(event)">
+    <button class="hbtn" style="font-size:.6rem;padding:3px 8px;border-color:rgba(255,255,255,.3)" onclick="document.getElementById('importFile').click()">📂</button>
+    <button class="hbtn" style="font-size:.6rem;padding:3px 8px;border-color:rgba(255,180,180,.4);color:#ffcdd2" onclick="confirmReset()">🗑️</button>
+  </div>
+</header>
+
+<div class="event-banner none" id="eventBanner">
+  <span class="ev-emoji">📅</span>
+  <span class="ev-name">今日无事件</span>
+  <span class="ev-desc">平平淡淡的一天</span>
+  <span class="ev-type" style="display:none">—</span>
+</div>
+
+<div class="tab-bar"><button class="tab act" id="tabKitchen" onclick="switchTab('kitchen')">🚚 餐车</button><button class="tab" id="tabFarm" onclick="switchTab('farm')">🌾 农场</button></div>
+
+<div class="cf" id="cfOver"><div class="cf-b"><div style="font-size:2.2rem">😴</div><p>提前打烊？没做完的订单会作废！</p><div class="cf-ac"><button class="cy" onclick="doEC()">确定</button><button class="cn" onclick="cancelEC()">继续</button></div></div></div>
+
+<div class="cf" id="resetOver"><div class="cf-b"><div style="font-size:2.5rem">⚠️</div><p>确定重置所有存档？<br><span style="font-size:.75rem;color:#e74c3c">所有等级、金币、成就将清空！</span></p><div class="cf-ac"><button class="cy" onclick="doReset()">重置</button><button class="cn" onclick="cancelReset()">取消</button></div></div></div>
+
+<div class="sm" id="smOver"><div class="sm-c"><div style="font-size:3rem;margin:4px 0" id="smEmoji">🍜</div><h2>📊 第 <span id="smDay">1</span> 天 打烊</h2><div class="bn" id="smCount">0</div><div style="font-size:.85rem;color:#6b4c32;font-weight:600">单完成</div><div class="mn" id="smRev">¥0</div><div class="sb2" id="smSub"></div><div class="rb"><div class="rf" id="smRate" style="width:0%"></div></div><div class="sm-r" id="smFail">失败: 0 单</div><div class="sm-r" id="smLvInfo"></div><div class="sm-r" id="smTotal">累计 0 天 · 总收入 ¥0</div><button class="sbtn" onclick="nextDay()">🌅 下一天</button></div></div>
+
+<div class="game-grid">
+  <div class="pnl orders-pnl"><div class="pt">📋 订单 <span id="oc" style="color:#8b7355;font-weight:400;font-size:.75rem"></span></div><div id="ol"><div style="color:#b8a48c;font-size:.75rem;padding:20px 0;text-align:center">点击「开工」开始营业</div></div></div>
+  <div class="pnl sv-pnl"><div class="pt">🍽️ 上菜区</div><div class="sv-box" id="svBox"><span style="color:#b8a48c;font-size:.7rem">出锅后的菜品在这里</span></div></div>
+  <div class="pnl ig-pnl"><div class="pt">🥬 备菜区 <span id="stoveHint" style="color:#b8a48c;font-weight:400;font-size:.65rem">点炉灶→选炊具→加食材</span></div><div class="sr"><div class="sz" style="width:62px;flex-shrink:0;padding:4px"><div id="seasWrap"></div><div id="herbsWrap"></div></div><div class="sz" style="flex:1;overflow-y:auto;max-height:260px"><div id="meatWrap"></div><div id="vegWrap"></div><div id="seafoodWrap"></div><div id="eggtofuWrap"></div><div id="stapleWrap"></div></div></div></div>
+  <div class="pnl stv-pnl"><div class="pt">🔥 炉灶 · 烹饪</div><div class="sr2" id="stovesRow"></div><div class="cold-mod" id="coldMod"><div class="cold-bowl" id="coldBowl" onclick="selBowl()">🥣</div><div class="cold-igs" id="coldIgs"><span style="color:#b8a48c;font-size:.55rem">点击碗→加食材→凉拌</span></div><button class="cold-btn sv" id="coldBtn" onclick="coldMix()" disabled>🥗 凉拌</button><button class="cold-btn cl" id="coldClear" onclick="clBowl()" disabled>🗑️</button></div></div>
+  <div class="log-pnl"><div class="log-hdr">📝 操作日志</div><div class="log-list" id="logList"><div class="log-empty">暂无操作记录</div></div></div>
+  <div class="pnl rcp-pnl" style="display:flex;flex-direction:column"><div class="pt">📖 食谱</div><div class="rc" id="rcp" style="flex:1;overflow-y:auto"><div class="re">点击订单查看食谱</div></div></div>
+  <div class="achv-pnl"><div class="pt">🏆 成就</div><div class="achv-grid" id="achvGrid"></div></div>
+  <div class="tip-pnl"><div class="pt" style="margin-bottom:4px">💡 烹饪小贴士</div><div class="tip-area" id="tipArea" style="flex:1;min-height:40px"><div class="re">🥩 切牛肉要逆着纹理切，切猪肉要顺着纹理切，口感更好。</div></div></div>
+</div>
+<div class="tc" id="tc"></div>
+
+<div class="farm-view" id="farmView">
+  <div class="farm-hdr"><span>💰 <span id="farmMoney">¥0</span></span><span>🌱 种子: <span id="seedCount">0</span></span><span>🏞️ <span id="plotCount">0</span>/25</span><button class="db-toggle" id="dbToggle" onclick="toggleDebug()" style="display:none">🔧</button></div>
+  <div class="db-panel" id="dbPanel">
+    <span class="lb">⏩ 快进</span>
+    <button class="db-btn" onclick="debugFF(1)">1h</button>
+    <button class="db-btn" onclick="debugFF(4)">4h</button>
+    <button class="db-btn" onclick="debugFF(8)">8h</button>
+    <button class="db-btn" onclick="debugFF(24)">24h</button>
+    <button class="db-btn danger" onclick="debugRipe()">🌾 全部成熟</button>
+  </div>
+  <div class="farm-grid" id="farmGrid"></div>
+  <div class="pt" style="font-size:.75rem;margin:6px 0 4px">🎒 种子袋 <button class="plant-all-btn" id="plantAllBtn" onclick="plantAll()" style="font-size:.6rem;padding:1px 6px;border-radius:4px;border:1px solid #e67e22;background:#fff;color:#e67e22;cursor:pointer">🌱 一键种植</button></div>
+  <div class="seed-bag" id="seedBag"><span style="color:#b8a48c;font-size:.7rem">没有种子，去商店购买</span></div>
+  <div class="pt" style="font-size:.8rem;margin:4px 0">🏪 种子商店</div>
+  <div class="farm-shop" id="farmShop"></div>
+  <div class="pt" style="font-size:.8rem;margin:0">📦 农仓库存 <button class="sell-all-btn" id="sellAllBtn" onclick="sellAllCrops()" style="display:none;font-size:.6rem;padding:1px 6px;border-radius:4px;border:1px solid #d4a373;background:#fff;color:#d4a373;cursor:pointer">💰 全部卖出</button> <button class="harvest-all-btn" id="harvestAllBtn" onclick="harvestAll()" style="font-size:.6rem;padding:1px 6px;border-radius:4px;border:1px solid #27ae60;background:#fff;color:#27ae60;cursor:pointer">🌾 一键收获</button></div>
+  <div class="farm-inv" id="farmInv"><span style="color:#b8a48c;font-size:.7rem">收获的食材会出现在这里</span></div>
+</div>
+
+<script src="js/all.js"></script>
 </body>
 </html>
