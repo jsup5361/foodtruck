@@ -630,14 +630,10 @@ function spawnO(){
 function upO(o){const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(!el)return;const t=el.querySelector('.ot');if(t){t.textContent=`⏱ ${Math.max(0,o.rem).toFixed(0)}s`;t.className='ot'+(o.rem<=10?' warn':'');}const b=el.querySelector('.opb');if(b){const p=o.total>0?Math.min(100,(o.total-o.rem)/o.total*100):0;b.style.width=p+'%';}el.classList.toggle('urg',o.rem<=10);}
 function orderFail(o){
   try{
-    o.st='failed';failed++;addLog('😤',`「${o.dish}」超时`);toast('😤',EXCUSES[Math.floor(Math.random()*EXCUSES.length)]);
-    const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('fail');
-    // 食客愤怒弹窗
+    o.st='failed';failed++;addLog('😤',`「${o.dish}」超时`);
     const ANGRY=['差评退钱！','等得我头发白了！','再也不来了！','花都谢了三轮了！','乌龟都比你快！','我外卖都到了还没上菜','隔壁都吃完了！','客服电话多少我要投诉','这速度是蜗牛附体','我先睡一觉再来'];
-    if(el){
-      const tip=document.createElement('div');tip.className='review-popup';tip.style.background='#ffe8e8';tip.style.color='#c0392b';tip.textContent=ANGRY[Math.floor(Math.random()*ANGRY.length)];el.style.position='relative';el.appendChild(tip);
-      setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
-    }
+    toast('😤',ANGRY[Math.floor(Math.random()*ANGRY.length)]);
+    const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('fail');
   }catch(e){}
   // 无论上面是否有异常，都要移除订单
   setTimeout(()=>{try{orders=orders.filter(x=>x.id!==o.id);renderOrders();if(session)spawnB();}catch(e){}},800);
@@ -665,10 +661,8 @@ function serveO(id){
     const COMPLAIN=['刀工是被狗啃了吗','切的啥啊这是','食材在哭你知道吗','没切块差评退钱','我妈都比你切得好','这是喂猪的吗','卖相扣大分了','厨师睡着了吗','筷子都嫌弃这盘菜','切都不切好意思端上来'];
     const pool=bonus===1.25?PRAISE:(bonus===0.75?COMPLAIN:NORMAL);
     const review=pool[Math.floor(Math.random()*pool.length)];
-    if(el){
-      const tip=document.createElement('div');tip.className='review-popup';tip.textContent=review;el.style.position='relative';el.appendChild(tip);
-      setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
-    }
+    const e2=bonus===1.25?'🤩':(bonus===0.75?'😤':'😋');
+    toast(e2,review);
     const isLast=doneToday>=15;
     if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
     checkAchv();
