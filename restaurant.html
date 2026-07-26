@@ -146,6 +146,9 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .tt .te{font-size:2.2rem;margin-bottom:6px}
 .tt .tt2{font-size:.9rem;font-weight:600;color:#3d2b1a;line-height:1.4}
 @keyframes tp{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+/* 食客反馈弹窗 */
+.review-popup{position:absolute;top:-28px;right:4px;background:#fff8e1;color:#856404;padding:3px 10px;border-radius:8px;font-size:.7rem;font-weight:700;z-index:10;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.1);pointer-events:none;animation:reviewFade 2.2s ease forwards}
+@keyframes reviewFade{0%{opacity:0;transform:translateY(6px) scale(.85)}15%{opacity:1;transform:translateY(0) scale(1)}65%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(.9)}}
 /* Confirm */
 .cf{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:101;justify-content:center;align-items:center}
 .cf.act{display:flex}
@@ -425,6 +428,10 @@ let ingredientUses={}; // 总剩余使用次数（做菜消耗这个）
 let farmUses={}; // 农场的剩余使用次数（用于跟踪 farmInventory 何时耗尽）
 let seedSelected=null; // 种子袋中选中的种子
 let lastBizDate=''; // 上次营业的北京时间日期
+// 菜板系统：需要切的食材及份数
+const CUT_ITEMS={"番茄":3,"青椒":3,"黄瓜":3,"洋葱":3,"土豆":3,"白菜":3,"茄子":3,"西兰花":3,"豆角":3,"胡萝卜":3,"冬瓜":3,"莲藕":3,"山药":3,"蒜苔":3,"白萝卜":3,"南瓜":3};
+let cutBoard={name:null,need:0,done:0}; // 菜板状态
+let stoveChopped={}; // {灶id: {食材名:true}} 记录每个炉灶中已切的食材
 const stoves=[{id:1,cw:null,mt:null,ig:[],st:'idle',tid:null,rem:0,tot:0,dish:null}];
 const coldBowl={ig:[],sel:false};
 
@@ -566,10 +573,11 @@ function startDay(){
   }
   if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
   totalDays++;day=totalDays;updateDay();
-  orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;
+  orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;cutBoard={name:null,need:0,done:0};
   upMoney();renderBowl();
   remain=480;session=true;
-  stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;});
+  stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.perfect=undefined;});
+  stoveChopped={};
   sBtn.textContent='🟢 营业中';sBtn.className='hbtn open';ecBtn.style.display='inline-block';
   upH();bizTimer=setInterval(()=>{remain--;upH();if(remain<=0)endDay();},1000);
   renderOrders();renderServe();renderStoves();rcp.innerHTML='<div class="re">点击订单查看食谱</div>';
@@ -618,9 +626,19 @@ function serveO(id){
   const o=orders.find(x=>x.id===id);if(!o||o.st!=='done')return;
   const idx=served.indexOf(o.dish);if(idx===-1){toast('😅','上菜区没有这道菜！');return;}
   served.splice(idx,1);
+  // 完美烹饪价格加成 25%
+  const bonus=o.perfect?1.25:1;
+  const finalPrice=Math.floor(o.price*bonus);
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
-  addLog('✅',`上菜完成「${o.dish}」¥${o.price}`);
-  completed++;doneToday++;revenue+=o.price;totalRevenue+=o.price;upMoney();
+  addLog('✅',`上菜完成「${o.dish}」¥${finalPrice}${bonus>1?' ⭐完美烹饪!':''}`);
+  completed++;doneToday++;revenue+=finalPrice;totalRevenue+=finalPrice;upMoney();
+  // 食客反馈弹窗
+  const REVIEWS=['香疯了！','绝了！','太好吃了！','再来一份！','人间美味！','妈妈的味道！','五星好评！','感动到哭！','味道太棒了！','我要给十个赞！'];
+  const review=REVIEWS[Math.floor(Math.random()*REVIEWS.length)];
+  if(el){
+    const tip=document.createElement('div');tip.className='review-popup';tip.textContent=review;el.style.position='relative';el.appendChild(tip);
+    setTimeout(()=>{if(tip.parentNode)tip.remove();},2200);
+  }
   // 每日上限15道菜
   const isLast=doneToday>=15;
   if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
@@ -644,7 +662,7 @@ function renderOrders(){
       <div class="opb" style="width:${pct}%"></div><div class="oc"><div class="dr">
         <span class="dn">${o.emoji} ${o.dish} <span class="ct">${o.cat}</span><span class="st">${stars}</span></span>
         <button class="sv-btn" onclick="event.stopPropagation();serveO(${o.id})" ${o.st==='done'?'':'disabled'}>🍽️上菜</button>
-      </div><div class="ot ${warn}">⏱ ${o.rem.toFixed(0)}s</div><div class="op">¥${o.price}</div></div></div>`;
+      </div><div class="ot ${warn}">⏱ ${o.rem.toFixed(0)}s</div><div class="op">${o.perfect?'⭐':''}¥${o.price}</div></div></div>`;
   }).join('');
   oc.textContent=`(${orders.length})`;
 }
@@ -674,9 +692,28 @@ function renderStoves(){
         ${s.st==='done'?`<button class="sb sv" onclick="event.stopPropagation();svSt(${s.id})">🍽️ 出锅</button>`:''}
         ${s.st==='idle'&&s.ig.length>0?`<button class="sb cl" onclick="event.stopPropagation();clSt(${s.id})">🗑️ 清</button>`:''}
       </div></div>`;
-  }).join('')+'<div class="stv placeholder"><div class="stv-lb">🔪 菜板</div><div class="sph" style="padding:20px 0;font-size:.65rem">暂未开放</div></div><div class="stv placeholder"><div class="stv-lb">🔥 烤箱</div><div class="sph" style="padding:20px 0;font-size:.65rem">暂未开放</div></div>';
+  }).join('')+_renderCutBoard()+'<div class="stv placeholder"><div class="stv-lb">🔥 烤箱</div><div class="sph" style="padding:20px 0;font-size:.65rem">暂未开放</div></div>';
 }
-
+function _renderCutBoard(){
+  const cb=cutBoard;
+  if(!cb.name) return '<div class="stv" style="background:linear-gradient(135deg,#fefcf8,#f5eee5);border-color:#d4c5a8;min-height:155px"><div class="stv-lb">🔪 菜板</div><div class="sph" style="padding:10px 0;font-size:.6rem;color:#b8a48c">点击需要切的食材<br>放到菜板上</div></div>';
+  const pct=Math.min(100,cb.done/cb.need*100);
+  const done=cb.done>=cb.need;
+  const ig=cb.name;
+  return `<div class="stv" style="background:linear-gradient(135deg,#fefcf8,#f5eee5);border-color:${done?'#27ae60':'#e67e22'};min-height:155px">
+    <div class="stv-lb">🔪 菜板 · ${ig}</div>
+    <div style="font-size:1.8rem;margin:4px 0">${ALL_E[ig]||'🥬'}</div>
+    <div style="font-size:.65rem;color:#6b4c32">${done?'✅ 已切好！':('切菜 '+cb.done+'/'+cb.need)}</div>
+    <div style="height:6px;background:#e0d5c8;border-radius:3px;margin:4px 8px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:${done?'#27ae60':'#e67e22'};border-radius:3px;transition:width .15s"></div>
+    </div>
+    <div style="display:flex;gap:4px;justify-content:center;margin-top:4px">
+      ${done?'':`<button class="sb ck" onclick="chopOnBoard()" style="font-size:.6rem">🔪 切</button>`}
+      ${done?`<button class="sb sv" onclick="boardToStove()" style="font-size:.6rem">🍳 入锅</button>`:''}
+      <button class="sb cl" onclick="clearBoard()" style="font-size:.6rem">🗑️</button>
+    </div>
+  </div>`;
+}
 function selSt(id){
   const s=stoves.find(x=>x.id===id);
   if(s&&s.st!=='idle'){if(selStove===id){selStove=null;coldBowl.sel=false;renderStoves();renderBowl();}return;}
@@ -724,6 +761,15 @@ function addIng(name){
     stock[name]--;
     if(stock[name]<=0)delete stock[name];
   }
+  // 菜板模式：需要切的食材先上菜板（非凉拌碗模式）
+  if(!coldBowl.sel&&CUT_ITEMS[name]){
+    if(cutBoard.name){
+      toast('🔪','菜板上还有 '+cutBoard.name+' 没切完！请先处理');renderStoves();renderIG();renderFarmInv();return;
+    }
+    cutBoard.name=name;cutBoard.need=CUT_ITEMS[name];cutBoard.done=0;
+    addLog('🔪',`放${name}到菜板上`);
+    renderStoves();renderIG();renderFarmInv();return;
+  }
   // 凉拌碗模式
   if(coldBowl.sel){coldBowl.ig.push(name);addLog(ALL_E[name]||'🥬',`放${name}进凉拌碗`);renderBowl();renderIG();renderFarmInv();return;}
   const s=stoves.find(x=>x.id===selStove);
@@ -733,6 +779,33 @@ function addIng(name){
   s.ig.push(name);
   addLog(ALL_E[name]||'🥬',`放${name}进灶${s.id}`);
   renderStoves();renderIG();renderFarmInv();
+}
+
+// ===== 菜板操作 =====
+function chopOnBoard(){
+  if(!cutBoard.name||cutBoard.done>=cutBoard.need){renderStoves();return;}
+  cutBoard.done++;
+  if(cutBoard.done>=cutBoard.need)addLog('✅',`${cutBoard.name}切好了！`);
+  else addLog('🔪',`切${cutBoard.name} ${cutBoard.done}/${cutBoard.need}`);
+  renderStoves();
+}
+function boardToStove(){
+  if(!cutBoard.name||cutBoard.done<cutBoard.need)return;
+  const s=stoves.find(x=>x.id===selStove);
+  if(!s){toast('👆','请先点击一个炉灶！');return;}
+  if(s.st!=='idle'){toast('🚫','这个灶正在工作中！');return;}
+  if(!s.cw){toast('🍳','请先选炊具！');return;}
+  s.ig.push(cutBoard.name);
+  if(!stoveChopped[s.id])stoveChopped[s.id]={};
+  stoveChopped[s.id][cutBoard.name]=true;
+  addLog(ALL_E[cutBoard.name]||'🥬',`放${cutBoard.name}进灶${s.id}（已切好）`);
+  cutBoard={name:null,need:0,done:0};
+  renderStoves();renderIG();renderFarmInv();
+}
+function clearBoard(){
+  if(cutBoard.name)addLog('🗑️',`清空菜板上的${cutBoard.name}`);
+  cutBoard={name:null,need:0,done:0};
+  renderStoves();
 }
 
 function startCk(id){
@@ -746,21 +819,28 @@ function startCk(id){
     }
   }
   if(!match){toast('🤔','食材/炊具不匹配！');return;}
+  // 完美烹饪检测：菜谱中所有需要切的食材是否都已切好
+  let perfect=true;
+  for(const ig of s.ig){
+    if(CUT_ITEMS[ig]&&(!stoveChopped[s.id]||!stoveChopped[s.id][ig])){perfect=false;break;}
+  }
+  s.perfect=perfect;
+  if(perfect)addLog('⭐',`灶${s.id}「${match.n}」完美烹饪！收益+25%`);
   addLog('🍳',`灶${s.id}开始${match.m||''}「${match.n}」`);
   selStove=null;s.st='active';s.dish=match.n;s.tot=match.t;s.rem=match.t;
   const start=Date.now();
   s.tid=setInterval(()=>{if(!session){clearInterval(s.tid);return;}s.rem=Math.max(0,match.t-(Date.now()-start)/1000);if(s.rem<=0){s.rem=0;s.st='done';clearInterval(s.tid);selStove=null;}renderStoves();},200);
   renderStoves();
 }
-function cancelCk(id){const s=stoves.find(x=>x.id===id);if(!s)return;clearInterval(s.tid);s.tid=null;addLog('✕',`取消灶${s.id}烹饪`);s.st='idle';s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;selStove=null;renderStoves();}
+function cancelCk(id){const s=stoves.find(x=>x.id===id);if(!s)return;clearInterval(s.tid);s.tid=null;addLog('✕',`取消灶${s.id}烹饪`);s.st='idle';s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.perfect=undefined;delete stoveChopped[s.id];selStove=null;renderStoves();}
 function svSt(id){
   const s=stoves.find(x=>x.id===id);if(!s||s.st!=='done')return;
   const dishName=s.dish;
   addLog('🍽️',`灶${s.id}「${dishName}」出锅`);
   sndCoin();
   served.push(dishName);
-  orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting')o.st='cooking';});
-  s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;
+  orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting'){o.st='cooking';o.perfect=s.perfect;}});
+  s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;s.perfect=undefined;delete stoveChopped[s.id];
   selStove=null;
   renderStoves();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='cooking')o.st='done';});
@@ -807,7 +887,7 @@ function doReset(){
   e.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
   totalDays=0;totalRevenue=0;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
-  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};
+  farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};stoveChopped={};
   upMoney();updateDay();renderOrders();renderServe();renderStoves();renderAchv();renderIG();
   toast('🗑️','存档已重置');
 }
