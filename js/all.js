@@ -208,13 +208,18 @@ function renderIG(){
 }
 
 
+// ===== 食材图片辅助 =====
+function ingImg(name,size){
+  const s=size||22;
+  return `<img src="assets/ingredients/${name}.png" class="ig-img" style="width:${s}px;height:${s}px" alt="${name}" title="${name}">`;
+}
 function mkItem(n){
   const uses=ingredientUses[n]||0;
   const empty=uses<=0;
   const hasFarm=(farmUses[n]||0)>0;
   const qty=IG_QTY(n);
   return `<div class="igb ${empty?'out':''}" onclick="addIng('${n}')" title="${empty?'¥'+(IG_PRICE[n]||5)+'买'+qty+'次':n+' 可用'+uses+'次（¥'+(IG_PRICE[n]||5)+'/'+qty+'次）'}">
-    <span class="e">${ALL_E[n]||'🥬'}</span>${n}${hasFarm?`<span class="farm-badge">🌾</span>`:''}${empty?'<br><span style="font-size:.5rem;color:#e74c3c">¥'+(IG_PRICE[n]||5)+'</span>':''}
+    <span class="e">${ingImg(n,22)}</span>${n}${hasFarm?`<span class="farm-badge">🌾</span>`:''}${empty?'<br><span style="font-size:.5rem;color:#e74c3c">¥'+(IG_PRICE[n]||5)+'</span>':''}
   </div>`;
 }
 
@@ -392,7 +397,7 @@ function renderOrders(){
   oc.textContent=`(${orders.length})`;
 }
 function renderServe(){svBox.innerHTML=served.length?served.map(d=>{const r=R.find(x=>x.n===d);return `<span class="sv-it">${r?r.e:'🍽️'} ${d}</span>`;}).join(''):'<span style="color:#b8a48c;font-size:.7rem">暂无菜品</span>';}
-function selO(id){selOrder=selOrder===id?null:id;renderOrders();const o=orders.find(x=>x.id===id);if(o&&selOrder){const r=R.find(x=>x.n===o.dish);if(!r)return;const reqLv=Math.ceil(r.s/2);const cutFoods=r.i.filter(x=>CUT_ITEMS[x]);const cutHtml=cutFoods.length?`<div><strong>🔪 切块：</strong><span style="color:#e67e22">${cutFoods.map(x=>ALL_E[x]+x+' ×'+CUT_ITEMS[x]).join('、')}</span></div>`:'';rcp.innerHTML=`<div style="font-size:.9rem;font-weight:700;margin-bottom:4px">${r.e} ${r.n}</div><div><span class="ct">${r.c}</span> ${'⭐'.repeat(Math.min(r.s,4))} <span style="color:#e67e22;font-size:.65rem">需Lv.${reqLv}</span></div><div><strong>炊具：</strong>${r.cw||'无需'}</div>${cutHtml}${r.m?`<div><strong>方法：</strong>${r.m}</div>`:''}<div><strong>食材：</strong>${r.i.map(x=>ALL_E[x]+x).join('、')}</div><div><strong>调料：</strong>${r.se.map(x=>ALL_E[x]+x).join('、')}</div><div><strong>用时：</strong>${r.t}s · <strong>售价：</strong>¥${r.p}</div>`;}else rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}
+function selO(id){selOrder=selOrder===id?null:id;renderOrders();const o=orders.find(x=>x.id===id);if(o&&selOrder){const r=R.find(x=>x.n===o.dish);if(!r)return;const reqLv=Math.ceil(r.s/2);const cutFoods=r.i.filter(x=>CUT_ITEMS[x]);const cutHtml=cutFoods.length?`<div><strong>🔪 切块：</strong><span style="color:#e67e22">${cutFoods.map(x=>ingImg(x,14)+x+' ×'+CUT_ITEMS[x]).join('、')}</span></div>`:'';rcp.innerHTML=`<div style="font-size:.9rem;font-weight:700;margin-bottom:4px">${r.e} ${r.n}</div><div><span class="ct">${r.c}</span> ${'⭐'.repeat(Math.min(r.s,4))} <span style="color:#e67e22;font-size:.65rem">需Lv.${reqLv}</span></div><div><strong>炊具：</strong>${r.cw||'无需'}</div>${cutHtml}${r.m?`<div><strong>方法：</strong>${r.m}</div>`:''}<div><strong>食材：</strong>${r.i.map(x=>ingImg(x,14)+x).join('、')}</div><div><strong>调料：</strong>${r.se.map(x=>ingImg(x,14)+x).join('、')}</div><div><strong>用时：</strong>${r.t}s · <strong>售价：</strong>¥${r.p}</div>`;}else rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}
 
 // ===== Stoves =====
 function renderStoves(){
@@ -408,7 +413,7 @@ function renderStoves(){
       <div class="stv-lb">🔥 灶${s.id}</div>
       <div class="stv-cw">${CW.map(c=>`<button class="cwb ${cwA(c)}" onclick="event.stopPropagation();setCw(${s.id},'${c}')" ${s.st!=='idle'?'disabled':''}>${c}</button>`).join('')}</div>
       ${methodRow}
-      <div class="stv-ig">${s.ig.length?s.ig.map(i=>ALL_E[i]||'🥬').join(''):'<span class="sph">空锅</span>'}${oilEl}${lidEl}</div>
+      <div class="stv-ig">${s.ig.length?s.ig.map(i=>ingImg(i,18)).join(''):'<span class="sph">空锅</span>'}${oilEl}${lidEl}</div>
       ${s.st==='active'||s.st==='done'?`<div class="stv-pb"><div class="stv-pbf" style="width:${pp}%"></div></div>`:''}
       <div class="stv-st ${s.st==='done'?'gd':''}">${s.st==='idle'?'空闲':(s.st==='active'?`⏱ ${s.rem.toFixed(0)}s`:'✅ 出锅')}</div>
       <div class="stv-ac">
@@ -636,7 +641,7 @@ function svSt(id){
 function selBowl(){coldBowl.sel=!coldBowl.sel;if(coldBowl.sel){selStove=null;boardSelected=false;}renderBowl();renderStoves();}
 function renderBowl(){
   coldEl.classList.toggle('sel',coldBowl.sel);
-  coldIgs.innerHTML=coldBowl.ig.length?coldBowl.ig.map(i=>ALL_E[i]||'🥬').join(''):'<span style="color:#b8a48c;font-size:.6rem">点击碗→加食材→凉拌</span>';
+  coldIgs.innerHTML=coldBowl.ig.length?coldBowl.ig.map(i=>ingImg(i,20)).join(''):'<span style="color:#b8a48c;font-size:.6rem">点击碗→加食材→凉拌</span>';
   coldBtn.disabled=coldBowl.ig.length<1;
   coldClear.disabled=coldBowl.ig.length<1;
 }
@@ -1219,7 +1224,7 @@ function renderFarmInv(){
     ?keys.map(k=>{
       const c=CROPS_DATA.find(x=>x.id===k);
       const price=c?Math.floor(c.cost*(1+c.tier*0.25)):0;
-      return '<span class="fi">'+(ALL_E[k]||'🥬')+k+'<span class="cnt">x'+farmInventory[k]+'</span>'
+      return '<span class="fi">'+ingImg(k,18)+k+'<span class="cnt">x'+farmInventory[k]+'</span>'
         +(price>0?'<button class="sell-btn" onclick="sellCrop(\''+k+'\')">¥'+price+'</button>':'')+'</span>';
     }).join('')
     :'<span style="color:#b8a48c;font-size:.7rem">收获的食材会出现在这里</span>';

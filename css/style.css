@@ -54,7 +54,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .igb{display:flex;flex-direction:column;align-items:center;gap:1px;padding:3px 4px;background:#fefcf8;border:1.5px solid #e0d5c8;border-radius:7px;cursor:pointer;transition:all .12s;font-size:.6rem;font-weight:600;color:#3d2b1a;min-width:40px}
 .igb:hover{transform:translateY(-2px);box-shadow:0 2px 6px rgba(0,0,0,.08);border-color:#d4a373}
 .igb:active{transform:scale(.93)}
-.igb .e{font-size:1.2rem}
+.igb .e{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px}
 .igb.out{opacity:.5;background:#f0ece8;cursor:pointer}
 .igb.out:hover{opacity:.7;border-color:#e74c3c}
 .stv-pnl{grid-column:2;grid-row:2}
@@ -79,7 +79,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .mtc:hover{background:#f5eee5}
 .mtc.act{background:#e67e22;color:#fff;border-color:#e67e22}
 .mtc:disabled{opacity:.35;cursor:not-allowed}
-.stv-ig{min-height:24px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:3px;position:relative}
+.stv-ig{min-height:24px;display:flex;align-items:center;justify-content:center;gap:2px;position:relative;flex-wrap:wrap}
 .stv-oil{position:absolute;bottom:4px;left:10%;width:80%;height:14px;background:linear-gradient(180deg,#f0c040,transparent);border-radius:50%;opacity:.6;pointer-events:none}
 .stv-lid{position:absolute;top:-2px;left:10%;width:80%;height:3px;background:#999;border-radius:2px;opacity:.4;pointer-events:none}
 .sph{font-size:.55rem;color:#b8a48c}
@@ -212,10 +212,10 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .sz{padding:6px}
 .szt{font-size:.8rem}
 .igb{min-width:44px;min-height:44px;font-size:.75rem;padding:5px 6px}
-.igb .e{font-size:1.4rem}
+.igb .e{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px}
 .stv{padding:10px}
 .stv-lb{font-size:.8rem}
-.stv-ig{min-height:30px;font-size:1.2rem}
+.stv-ig{min-height:30px;display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap}
 .rc{font-size:.9rem}
 .cold-mod{padding:8px}
 .cold-mod .cold-bowl{width:44px;height:36px;font-size:1.3rem}
@@ -246,7 +246,7 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .farm-shop{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#faf5ee;border-radius:10px}
 .shop-item{display:flex;flex-direction:column;align-items:center;padding:6px 10px;background:#fff;border:1.5px solid #e0d5c8;border-radius:8px;cursor:pointer;transition:all .12s;font-size:.65rem;font-weight:600;color:#3d2b1a;min-width:56px}
 .shop-item:hover{transform:translateY(-2px);border-color:#d4a373}
-.shop-item .e{font-size:1.3rem}
+.shop-item .e{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px}
 .shop-item .cost{color:#e67e22;font-size:.6rem}
 .farm-inv{display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:#faf5ee;border-radius:10px;min-height:40px;align-items:center}
 .farm-inv .fi{display:inline-flex;align-items:center;gap:2px;padding:3px 8px;background:#fff;border:1px solid #d4edda;border-radius:6px;font-size:.7rem;font-weight:600;color:#155724}
@@ -279,3 +279,6 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 .plot{min-height:50px;font-size:1.4rem}
 .shop-item{min-width:48px;padding:4px 6px}
 }
+
+/* ===== 食材图片 ===== */
+.ig-img{object-fit:contain;border-radius:4px;image-rendering:auto;vertical-align:middle;display:inline-block}
