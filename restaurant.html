@@ -583,7 +583,7 @@ function startDay(){
   orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;boardSelected=false;cutBoard={name:null,need:0,done:0};
   upMoney();renderBowl();
   remain=480;session=true;
-  stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.perfect=undefined;});
+  stoves.forEach(s=>{clearInterval(s.tid);s.tid=null;s.st='idle';s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.cutState='none';});
   stoveChopped={};coldChopped={};
   sBtn.textContent='🟢 营业中';sBtn.className='hbtn open';ecBtn.style.display='inline-block';
   upH();bizTimer=setInterval(()=>{remain--;upH();if(remain<=0)endDay();},1000);
@@ -646,11 +646,14 @@ function serveO(id){
   const o=orders.find(x=>x.id===id);if(!o||o.st!=='done')return;
   const idx=served.indexOf(o.dish);if(idx===-1){toast('😅','上菜区没有这道菜！');return;}
   served.splice(idx,1);
-  // 完美烹饪价格加成 25%
-  const bonus=o.perfect?1.25:1;
+  // 切菜收益加成：full=+25%, penalty=-25%, partial/none=不变
+  let bonus=1;
+  if(o.cutState==='full')bonus=1.25;
+  else if(o.cutState==='penalty')bonus=0.75;
   const finalPrice=Math.floor(o.price*bonus);
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
-  addLog('✅',`上菜完成「${o.dish}」¥${finalPrice}${bonus>1?' ⭐完美烹饪!':''}`);
+  const tag=bonus===1.25?' ⭐完美切块!':(bonus===0.75?' ⚠️未切块-25%':'');
+  addLog('✅',`上菜完成「${o.dish}」¥${finalPrice}${tag}`);
   // 确保结算+定时器清理一定执行（隔离可能的异常）
   try{
     completed++;doneToday++;revenue+=finalPrice;totalRevenue+=finalPrice;upMoney();
@@ -684,7 +687,7 @@ function renderOrders(){
       <div class="opb" style="width:${pct}%"></div><div class="oc"><div class="dr">
         <span class="dn">${o.emoji} ${o.dish} <span class="ct">${o.cat}</span><span class="st">${stars}</span></span>
         <button class="sv-btn" onclick="event.stopPropagation();serveO(${o.id})" ${o.st==='done'?'':'disabled'}>🍽️上菜</button>
-      </div><div class="ot ${warn}">⏱ ${o.rem.toFixed(0)}s</div><div class="op">${o.perfect?'⭐':''}¥${o.price}</div></div></div>`;
+      </div><div class="ot ${warn}">⏱ ${o.rem.toFixed(0)}s</div><div class="op">${o.cutState==='full'?'⭐':(o.cutState==='penalty'?'⚠️':'')}¥${o.price}</div></div></div>`;
   }).join('');
   oc.textContent=`(${orders.length})`;
 }
@@ -855,29 +858,33 @@ function startCk(id){
     }
   }
   if(!match){toast('🤔','食材/炊具不匹配！');return;}
-  // 完美烹饪检测：菜谱中所有需要切的食材是否都已切好（至少有一种需要切）
-  let perfect=false,hasCut=false;
-  for(const ig of s.ig){
-    if(CUT_ITEMS[ig]){hasCut=true;if(!stoveChopped[s.id]||!stoveChopped[s.id][ig]){perfect=false;hasCut=false;break;}}
+  // 切菜状态：none=无需要切, penalty=需要切但没切, partial=切了部分, full=全部切好
+  let cutState='none';
+  const needCut=s.ig.filter(ig=>CUT_ITEMS[ig]);
+  if(needCut.length>0){
+    const chopped=needCut.filter(ig=>stoveChopped[s.id]&&stoveChopped[s.id][ig]);
+    if(chopped.length===needCut.length)cutState='full';
+    else if(chopped.length===0)cutState='penalty';
+    else cutState='partial';
   }
-  if(hasCut)perfect=true;
-  s.perfect=perfect;
-  if(perfect)addLog('⭐',`灶${s.id}「${match.n}」完美烹饪！收益+25%`);
+  s.cutState=cutState;
+  if(cutState==='full')addLog('⭐',`灶${s.id}「${match.n}」完美切块！收益+25%`);
+  else if(cutState==='penalty')addLog('⚠️',`灶${s.id}「${match.n}」未切块，收益-25%`);
   addLog('🍳',`灶${s.id}开始${match.m||''}「${match.n}」`);
   selStove=null;s.st='active';s.dish=match.n;s.tot=match.t;s.rem=match.t;
   const start=Date.now();
   s.tid=setInterval(()=>{if(!session){clearInterval(s.tid);return;}s.rem=Math.max(0,match.t-(Date.now()-start)/1000);if(s.rem<=0){s.rem=0;s.st='done';clearInterval(s.tid);selStove=null;}renderStoves();},200);
   renderStoves();
 }
-function cancelCk(id){const s=stoves.find(x=>x.id===id);if(!s)return;clearInterval(s.tid);s.tid=null;addLog('✕',`取消灶${s.id}烹饪`);s.st='idle';s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.perfect=undefined;delete stoveChopped[s.id];selStove=null;renderStoves();}
+function cancelCk(id){const s=stoves.find(x=>x.id===id);if(!s)return;clearInterval(s.tid);s.tid=null;addLog('✕',`取消灶${s.id}烹饪`);s.st='idle';s.cw=null;s.mt=null;s.dish=null;s.rem=0;s.tot=0;s.cutState='none';delete stoveChopped[s.id];selStove=null;renderStoves();}
 function svSt(id){
   const s=stoves.find(x=>x.id===id);if(!s||s.st!=='done')return;
   const dishName=s.dish;
   addLog('🍽️',`灶${s.id}「${dishName}」出锅`);
   sndCoin();
   if(!served.includes(dishName))served.push(dishName);
-  orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting'){o.st='cooking';o.perfect=s.perfect;}});
-  s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;s.perfect=undefined;delete stoveChopped[s.id];
+  orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting'){o.st='cooking';o.cutState=s.cutState;}});
+  s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;s.cutState='none';delete stoveChopped[s.id];
   selStove=null;
   renderStoves();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='cooking')o.st='done';});
@@ -903,16 +910,20 @@ function coldMix(){
     if(cont.length===need.size&&cont.every(i=>need.has(i))){match=r;break;}
   }
   if(!match){toast('🤔','食材不匹配任何凉拌菜！');return;}
-  // 检测凉拌菜的完美烹饪（至少有一种需要切的食材且都已切好）
-  let perfect=false,hasCut=false;
-  for(const ig of coldBowl.ig){
-    if(CUT_ITEMS[ig]){hasCut=true;if(!coldChopped[ig]){perfect=false;hasCut=false;break;}}
+  // 切菜检测凉拌版
+  let cutState='none';
+  const needCut=coldBowl.ig.filter(ig=>CUT_ITEMS[ig]);
+  if(needCut.length>0){
+    const chopped=needCut.filter(ig=>coldChopped[ig]);
+    if(chopped.length===needCut.length)cutState='full';
+    else if(chopped.length===0)cutState='penalty';
+    else cutState='partial';
   }
-  if(hasCut)perfect=true;
-  if(perfect)addLog('⭐','凉拌「'+match.n+'」完美切块！收益+25%');
+  if(cutState==='full')addLog('⭐','凉拌「'+match.n+'」完美切块！收益+25%');
+  else if(cutState==='penalty')addLog('⚠️','凉拌「'+match.n+'」未切块，收益-25%');
   addLog('🥗',`凉拌「${match.n}」完成`);
   served.push(match.n);
-  orders.forEach(o=>{if(o.dish===match.n&&o.st==='waiting'){o.st='cooking';o.perfect=perfect;}});
+  orders.forEach(o=>{if(o.dish===match.n&&o.st==='waiting'){o.st='cooking';o.cutState=cutState;}});
   coldBowl.ig=[];coldBowl.sel=false;coldChopped={};renderBowl();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===match.n&&o.st==='cooking')o.st='done';});
   renderOrders();
