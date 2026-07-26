@@ -631,25 +631,25 @@ function serveO(id){
   const finalPrice=Math.floor(o.price*bonus);
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
   addLog('✅',`上菜完成「${o.dish}」¥${finalPrice}${bonus>1?' ⭐完美烹饪!':''}`);
-  completed++;doneToday++;revenue+=finalPrice;totalRevenue+=finalPrice;upMoney();
-  // 食客反馈弹窗（隔离异常，不影响结算）
+  // 确保结算+定时器清理一定执行（隔离可能的异常）
   try{
+    completed++;doneToday++;revenue+=finalPrice;totalRevenue+=finalPrice;upMoney();
     const REVIEWS=['香疯了！','绝了！','太好吃了！','再来一份！','人间美味！','妈妈的味道！','五星好评！','感动到哭！','味道太棒了！','我要给十个赞！'];
     const review=REVIEWS[Math.floor(Math.random()*REVIEWS.length)];
     if(el){
       const tip=document.createElement('div');tip.className='review-popup';tip.textContent=review;el.style.position='relative';el.appendChild(tip);
       setTimeout(()=>{try{if(tip.parentNode)tip.remove();}catch(e){}},2200);
     }
+    const isLast=doneToday>=15;
+    if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
+    checkAchv();
   }catch(e){}
-  // 每日上限15道菜
-  const isLast=doneToday>=15;
-  if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
-  checkAchv();
+  // 无论上面是否有异常，都要清除定时器并移除订单
   clearInterval(o.tid);
   setTimeout(()=>{
     orders=orders.filter(x=>x.id!==id);renderOrders();renderServe();
     if(selOrder===id){selOrder=null;rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}
-    if(isLast){if(session)endDay();}else if(session)spawnB();
+    if(doneToday>=15){if(session)endDay();}else if(session)spawnB();
   },500);
 }
 
@@ -669,7 +669,7 @@ function renderOrders(){
   oc.textContent=`(${orders.length})`;
 }
 function renderServe(){svBox.innerHTML=served.length?served.map(d=>{const r=R.find(x=>x.n===d);return `<span class="sv-it">${r?r.e:'🍽️'} ${d}</span>`;}).join(''):'<span style="color:#b8a48c;font-size:.7rem">暂无菜品</span>';}
-function selO(id){selOrder=selOrder===id?null:id;renderOrders();const o=orders.find(x=>x.id===id);if(o&&selOrder){const r=R.find(x=>x.n===o.dish);if(!r)return;const reqLv=Math.ceil(r.s/2);rcp.innerHTML=`<div style="font-size:.9rem;font-weight:700;margin-bottom:4px">${r.e} ${r.n}</div><div><span class="ct">${r.c}</span> ${'⭐'.repeat(Math.min(r.s,4))} <span style="color:#e67e22;font-size:.65rem">需Lv.${reqLv}</span></div><div><strong>炊具：</strong>${r.cw||'无需'}</div>${r.m?`<div><strong>方法：</strong>${r.m}</div>`:''}<div><strong>食材：</strong>${r.i.map(x=>ALL_E[x]+x).join('、')}</div><div><strong>调料：</strong>${r.se.map(x=>ALL_E[x]+x).join('、')}</div><div><strong>用时：</strong>${r.t}s · <strong>售价：</strong>¥${r.p}</div>`;}else rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}
+function selO(id){selOrder=selOrder===id?null:id;renderOrders();const o=orders.find(x=>x.id===id);if(o&&selOrder){const r=R.find(x=>x.n===o.dish);if(!r)return;const reqLv=Math.ceil(r.s/2);const cutFoods=r.i.filter(x=>CUT_ITEMS[x]);const cutHtml=cutFoods.length?`<div><strong>🔪 切块：</strong><span style="color:#e67e22">${cutFoods.map(x=>ALL_E[x]+x+' ×'+CUT_ITEMS[x]).join('、')}</span></div>`:'';rcp.innerHTML=`<div style="font-size:.9rem;font-weight:700;margin-bottom:4px">${r.e} ${r.n}</div><div><span class="ct">${r.c}</span> ${'⭐'.repeat(Math.min(r.s,4))} <span style="color:#e67e22;font-size:.65rem">需Lv.${reqLv}</span></div><div><strong>炊具：</strong>${r.cw||'无需'}</div>${cutHtml}${r.m?`<div><strong>方法：</strong>${r.m}</div>`:''}<div><strong>食材：</strong>${r.i.map(x=>ALL_E[x]+x).join('、')}</div><div><strong>调料：</strong>${r.se.map(x=>ALL_E[x]+x).join('、')}</div><div><strong>用时：</strong>${r.t}s · <strong>售价：</strong>¥${r.p}</div>`;}else rcp.innerHTML='<div class="re">点击订单查看食谱</div>';}
 
 // ===== Stoves =====
 function renderStoves(){
@@ -840,7 +840,7 @@ function svSt(id){
   const dishName=s.dish;
   addLog('🍽️',`灶${s.id}「${dishName}」出锅`);
   sndCoin();
-  served.push(dishName);
+  if(!served.includes(dishName))served.push(dishName);
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting'){o.st='cooking';o.perfect=s.perfect;}});
   s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;s.perfect=undefined;delete stoveChopped[s.id];
   selStove=null;
