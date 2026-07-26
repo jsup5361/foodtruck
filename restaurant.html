@@ -572,6 +572,7 @@ function startDay(){
       return;
     }
   }
+  _hideAllModals();
   if(bizTimer){clearInterval(bizTimer);bizTimer=null;}
   totalDays++;day=totalDays;updateDay();
   orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;selOrder=null;selStove=null;coldBowl.ig=[];coldBowl.sel=false;cutBoard={name:null,need:0,done:0};
@@ -907,12 +908,14 @@ function coldMix(){
 function upMoney(){moneyD.textContent=`💰 ¥${totalRevenue}`;}
 
 // ===== Confirm/End =====
-function confirmEC(){cfO.classList.add('act');}
-function cancelEC(){cfO.classList.remove('act');}
-function doEC(){cfO.classList.remove('act');endDay();}
-function _resetEl(){return document.getElementById('resetOver');}
-function confirmReset(){const e=_resetEl();if(e){e.classList.add('act');}}
-function cancelReset(){const e=_resetEl();if(e){e.classList.remove('act');}}
+function _el(id){return document.getElementById(id);}
+function _hideAllModals(){const e=_el('cfOver');if(e)e.classList.remove('act');const e2=_el('resetOver');if(e2)e2.classList.remove('act');const e3=_el('smOver');if(e3)e3.classList.remove('act');}
+function confirmEC(){const e=_el('cfOver');if(e){_hideAllModals();e.classList.add('act');}}
+function cancelEC(){const e=_el('cfOver');if(e)e.classList.remove('act');}
+function doEC(){const e=_el('cfOver');if(e)e.classList.remove('act');endDay();}
+function _resetEl(){return _el('resetOver');}
+function confirmReset(){const e=_resetEl();if(e){_hideAllModals();e.classList.add('act');}}
+function cancelReset(){const e=_resetEl();if(e)e.classList.remove('act');}
 function doReset(){
   const e=_resetEl();if(!e)return;
   e.classList.remove('act');
@@ -955,13 +958,13 @@ function endDay(){
   const idx=Math.min(4,Math.floor(rate/20));
   document.getElementById('smEmoji').textContent=emojis[idx];
   document.getElementById('smSub').textContent=msgs[idx];
-  smO.classList.add('act');
+  _hideAllModals();smO.classList.add('act');
   setTimeout(()=>{document.getElementById('smRate').style.width=rate+'%';},300);
   renderOrders();renderServe();renderStoves();
 }
 
 function nextDay(){
-  smO.classList.remove('act');
+  _hideAllModals();
   document.getElementById('smRate').style.width='0%';
   orders=[];served=[];completed=0;failed=0;revenue=0;doneToday=0;
   stoves.forEach(s=>{s.ig=[];s.cw=null;s.mt=null;s.st='idle';s.dish=null;s.rem=0;s.tot=0;});
