@@ -502,6 +502,9 @@ const logList=document.getElementById('logList');
 const MAX_LOG=5;
 let gameLog=[];
 
+// 调试模式：本地环境显示 debug 按钮
+const isDebugEnv = location.hostname==='localhost'||location.protocol==='file:'||location.hostname==='127.0.0.1';
+
 renderIG();
 renderBowl();
 renderStoves();
@@ -1027,7 +1030,6 @@ if(tipArea)showTip();
 if(tipArea)setInterval(showTip,20000);
 
 // ===== 调试模式（本地环境可用，push 版本隐藏）=====
-const isDebugEnv = location.hostname==='localhost'||location.protocol==='file:'||location.hostname==='127.0.0.1';
 let debugMode=false;
 function toggleDebug(){
   if(!isDebugEnv)return;
