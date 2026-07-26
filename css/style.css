@@ -243,6 +243,8 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 @keyframes glow{0%{box-shadow:0 0 4px rgba(39,174,96,.3)}100%{box-shadow:0 0 12px rgba(39,174,96,.5)}}
 .plot .timer{font-size:.55rem;color:#888;margin-top:2px;position:absolute;bottom:4px}
 .plot .lock{font-size:.55rem;color:#b8a48c}
+.plot img{background:transparent;mix-blend-mode:multiply}
+.seed-item img,.shop-item img{background:transparent;mix-blend-mode:multiply}
 .farm-shop{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#faf5ee;border-radius:10px}
 .shop-item{display:flex;flex-direction:column;align-items:center;padding:6px 10px;background:#fff;border:1.5px solid #e0d5c8;border-radius:8px;cursor:pointer;transition:all .12s;font-size:.65rem;font-weight:600;color:#3d2b1a;min-width:56px}
 .shop-item:hover{transform:translateY(-2px);border-color:#d4a373}
@@ -282,3 +284,4 @@ body{font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;background:#fdf6e
 
 /* ===== 食材图片 ===== */
 .ig-img{object-fit:contain;border-radius:4px;image-rendering:auto;vertical-align:middle;display:inline-block}
+.igb .ig-img,.fi .ig-img{background:transparent;border-radius:2px}
