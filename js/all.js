@@ -1139,8 +1139,8 @@ function renderFarm(){
     const remain=Math.max(0,Math.ceil((p.growTime-elapsed)/1000));
     const rh=Math.floor(remain/3600), rm=Math.floor((remain%3600)/60);
     const timeStr=done?'':(rh>0?rh+'h'+rm+'m':rm+'m');
-    return '<div class="plot '+(done?'ripe':'sown')+'" onclick="'+(done?'harvestCrop('+i+')':'\'\'')+'" title="'+(done?'点击收获':c.emoji+' 剩余'+timeStr)+'">'
-      +c.emoji+(done?'':'<span class="timer">'+timeStr+'</span>')+'</div>';
+    return '<div class="plot '+(done?'ripe':'sown')+'" onclick="'+(done?'harvestCrop('+i+')':'\'\'')+'" title="'+(done?'点击收获':c.id+' 剩余'+timeStr)+'">'
+      +ingImg(c.id,24)+(done?'':'<span class="timer">'+timeStr+'</span>')+'</div>';
   }).join('');
   // 种子袋
   const avail=Object.keys(farmSeeds).filter(s=>farmSeeds[s]>0);
@@ -1150,15 +1150,15 @@ function renderFarm(){
       const c=CROPS_DATA.find(x=>x.id===id);
       if(!c||lv<c.unlock)return '';
       const sel=seedSelected===id;
-      return '<div class="seed-item'+(sel?' sel':'')+'" onclick="selectSeed(\''+id+'\')" title="'+(sel?'点击取消':c.emoji+' '+id)+'">'
-        +'<span class="e">'+c.emoji+'</span><span class="name">'+id+'</span><span class="cnt">x'+farmSeeds[id]+'</span>'
+      return '<div class="seed-item'+(sel?' sel':'')+'" onclick="selectSeed(\''+id+'\')" title="'+(sel?'点击取消':c.id+' '+id)+'">'
+        +'<span class="e">'+ingImg(id,20)+'</span><span class="name">'+id+'</span><span class="cnt">x'+farmSeeds[id]+'</span>'
         +(sel?'<span class="sel-mark">✓</span>':'')+'</div>';
     }).join('')
     :'<span style="color:#b8a48c;font-size:.7rem">没有种子，去商店购买</span>';
   document.getElementById('farmShop').innerHTML=CROPS_DATA.filter(c=>lv>=c.unlock).map(c=>{
     const seedOwn=farmSeeds[c.id]||0;
     return '<div class="shop-item" onclick="buySeed(\''+c.id+'\')" title="T'+c.tier+' · '+c.growMins+'m · 每份可用'+(TIER_MULT[c.tier]||3)+'次">'
-      +'<span class="e">'+c.emoji+'</span>'+c.id+'<span class="cost">¥'+c.cost+'</span>'
+      +'<span class="e">'+ingImg(c.id,22)+'</span>'+c.id+'<span class="cost">¥'+c.cost+'</span>'
       +'<span style="font-size:.5rem;color:#888;margin-left:2px">'+c.growMins+'m</span>'
       +(seedOwn>0?'<span style="font-size:.5rem;color:#27ae60">x'+seedOwn+'</span>':'')+'</div>';
   }).join('');
