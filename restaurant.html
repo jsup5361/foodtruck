@@ -452,6 +452,8 @@ let farmTimerId=null;
 let ingredientUses={}; // 总剩余使用次数（做菜消耗这个）
 let farmUses={}; // 农场的剩余使用次数（用于跟踪 farmInventory 何时耗尽）
 let seedSelected=null; // 种子袋中选中的种子
+let currentEvent=null;
+let eventDayCount=0;
 let lastBizHour=-1; // 上次营业的小时（0-23），-1=从未营业
 // 菜板系统：需要切的食材及份数
 const CUT_ITEMS={"番茄":3,"青椒":3,"黄瓜":3,"洋葱":3,"土豆":3,"白菜":3,"茄子":3,"西兰花":3,"豆角":3,"胡萝卜":3,"冬瓜":3,"莲藕":3,"山药":3,"蒜苔":3,"白萝卜":3,"南瓜":3};
@@ -1278,8 +1280,6 @@ const EVENTS = [
     onMenuDesc:'👾 随机乱点！可能出怪菜'
   }
 ];
-let currentEvent=null;
-let eventDayCount=0;
 
 
 // ===== 烹饪小贴士 =====
