@@ -1135,12 +1135,19 @@ function renderFarm(){
     }
     const c=CROPS_DATA.find(x=>x.id===p.crop);if(!c)return '<div class="plot">❓</div>';
     const elapsed=Date.now()-p.plantedAt;
+    const pct=Math.min(100,elapsed/p.growTime*100);
     const done=elapsed>=p.growTime;
     const remain=Math.max(0,Math.ceil((p.growTime-elapsed)/1000));
     const rh=Math.floor(remain/3600), rm=Math.floor((remain%3600)/60);
     const timeStr=done?'':(rh>0?rh+'h'+rm+'m':rm+'m');
+    // 生长阶段图片：种子 → 嫩芽 → 成熟
+    let stageImg;
+    if(done)stageImg=ingImg(c.id,24);
+    else if(pct<25)stageImg='<img src="assets/ingredients/seed.png" class="ig-img" style="width:24px;height:24px" alt="种子" title="'+c.id+'">';
+    else if(pct<65)stageImg='<img src="assets/ingredients/sprout.png" class="ig-img" style="width:24px;height:24px" alt="嫩芽" title="'+c.id+'">';
+    else stageImg=ingImg(c.id,24);
     return '<div class="plot '+(done?'ripe':'sown')+'" onclick="'+(done?'harvestCrop('+i+')':'\'\'')+'" title="'+(done?'点击收获':c.id+' 剩余'+timeStr)+'">'
-      +ingImg(c.id,24)+(done?'':'<span class="timer">'+timeStr+'</span>')+'</div>';
+      +stageImg+(done?'':'<span class="timer">'+timeStr+'</span>')+'</div>';
   }).join('');
   // 种子袋
   const avail=Object.keys(farmSeeds).filter(s=>farmSeeds[s]>0);
