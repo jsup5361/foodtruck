@@ -443,7 +443,7 @@ const lastT=s.t||0;const offline=lastT?Math.floor((Date.now()-lastT)/1000):0;
 if(offline>10){
   let mature=0;
   farmPlots.forEach(p=>{
-    if(p.crop&&p.plantedAt){p.plantedAt+=offline*1000;if(Date.now()-p.plantedAt>=p.growTime)mature++;}
+    if(p.crop&&p.plantedAt&&Date.now()-p.plantedAt>=p.growTime)mature++;
   });
   if(mature>0)setTimeout(()=>toast('🎉',`欢迎回来！离开了 ${(offline/3600).toFixed(1)} 小时，${mature} 颗作物已成熟！`),500);
   else if(offline>3600)setTimeout(()=>toast('👋',`欢迎回来！离开了 ${(offline/3600).toFixed(1)} 小时`),500);
