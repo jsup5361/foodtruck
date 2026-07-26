@@ -447,6 +447,8 @@ function getLvProgress() { const l=getLv(), cur=LV_TH[l-1]||0, next=LV_TH[l]||0;
 
 // Load save - enhanced with timestamp
 try{const s=JSON.parse(localStorage.getItem('foodtruck'));if(s){totalDays=s.d||0;totalRevenue=s.r||0;totalCompleted=s.c||0;completedDishes=s.cd||[];unlockedAchv=s.ua||{};stock=s.sk||{};farmInventory=s.fi||{};farmPlots=s.fp||Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds=s.fs||{};unlockedPlots=s.up||6;ingredientUses=s.iu||{};farmUses=s.fu||{};lastBizDate=s.bd||'';day=totalDays||1;
+// 新玩家保护：确保初始资金不低于50
+if(totalDays===0&&totalRevenue<50)totalRevenue=50;
 // 离线收益计算
 const lastT=s.t||0;const offline=lastT?Math.floor((Date.now()-lastT)/1000):0;
 if(offline>10){
