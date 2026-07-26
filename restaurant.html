@@ -614,7 +614,7 @@ function spawnO(){
   const to=65+Math.floor(Math.random()*46);
   const o={id:nextId++,dish:name,emoji:r.e,cat:r.c,stars:r.s,ingredients:[...r.i],seasonings:[...r.se],total:to,rem:to,start:Date.now(),st:'waiting',tid:null,price:r.p,method:r.m,cookware:r.cw};
   orders.push(o);
-  o.tid=setInterval(()=>{if(!session)return;o.rem=Math.max(0,o.total-(Date.now()-o.start)/1000);if(o.rem<=0){o.rem=0;clearInterval(o.tid);orderFail(o);}else upO(o);},200);
+  o.tid=setInterval(()=>{try{if(!session)return;o.rem=Math.max(0,o.total-(Date.now()-o.start)/1000);if(o.rem<=0){o.rem=0;clearInterval(o.tid);orderFail(o);}else upO(o);}catch(e){}},200);
   renderOrders();
   requestAnimationFrame(()=>{const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('app');});
 }
