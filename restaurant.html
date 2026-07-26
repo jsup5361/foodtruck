@@ -639,15 +639,19 @@ function orderFail(o){
 // ===== Serve Order =====
 function serveO(id){
   const o=orders.find(x=>x.id===id);if(!o||o.st!=='done')return;
-  const idx=served.indexOf(o.dish);if(idx===-1){toast('😅','上菜区没有这道菜！');return;}
+  let idx=served.indexOf(o.dish);
+  // 黑暗料理匹配：如果按菜名找不到，尝试用第一个黑暗料理
+  if(idx===-1&&o.cutState==='worst')idx=served.findIndex(d=>!R.find(r=>r.n===d));
+  if(idx===-1){toast('😅','上菜区没有对应的菜！');return;}
   served.splice(idx,1);
   // 切菜收益加成：full=+25%, penalty=-25%, partial/none=不变
   let bonus=1;
   if(o.cutState==='full')bonus=1.25;
   else if(o.cutState==='penalty')bonus=0.75;
+  else if(o.cutState==='worst')bonus=0.25;
   const finalPrice=Math.floor(o.price*bonus);
   const el=document.querySelector(`.ord-it[data-id="${o.id}"]`);if(el)el.classList.add('cplt');
-  const tag=bonus===1.25?' ⭐完美切块!':(bonus===0.75?' ⚠️未切块-25%':'');
+  const tag=bonus===1.25?' ⭐完美切块!':(bonus===0.75?' ⚠️未切块-25%':(bonus===0.25?' 🤮黑暗料理！':''));
   addLog('✅',`上菜完成「${o.dish}」¥${finalPrice}${tag}`);
   // 确保结算+定时器清理一定执行（隔离可能的异常）
   try{
@@ -656,9 +660,11 @@ function serveO(id){
     const PRAISE=['这刀工绝了！','米其林满分！','香到隔壁报警！','舌头要融化了！','我愿称之为最强！','再来十份都不够！','这味道能上春晚！','厨神本神在此！','好吃到螺旋升天！','吃完想骂家里饭难吃！'];
     const NORMAL=['还行吧下次努力','差一点就封神了','中规中矩没毛病','能吃，还行吧','我妈做的也差不多','比食堂强点有限','不惊艳但管饱','味道在躲猫猫','就这？开个玩笑哈哈','再练练刀工吧！'];
     const COMPLAIN=['刀工是被狗啃了吗','切的啥啊这是','食材在哭你知道吗','没切块差评退钱','我妈都比你切得好','这是喂猪的吗','卖相扣大分了','厨师睡着了吗','筷子都嫌弃这盘菜','切都不切好意思端上来'];
-    const pool=bonus===1.25?PRAISE:(bonus===0.75?COMPLAIN:NORMAL);
+    const WORST=['这做的什么玩意儿！','倒给猪都不吃！','黑暗料理界新星！','厨房杀手实锤了！','我在厕所都比这香！','这盘菜该送去博物馆展览！','隔壁狗闻到都跑了！','你确定这不是泔水？','我要求精神损失费！','妈妈我再也不挑食了！'];
+    const POOL={full:PRAISE,penalty:COMPLAIN,worst:WORST};
+    const pool=POOL[o.cutState]||NORMAL;
     const review=pool[Math.floor(Math.random()*pool.length)];
-    const e2=bonus===1.25?'🤩':(bonus===0.75?'😤':'😋');
+    const e2=o.cutState==='full'?'🤩':(o.cutState==='penalty'?'😤':(o.cutState==='worst'?'🤮':'😋'));
     toast(e2,review);
     const isLast=doneToday>=15;
     if(!completedDishes.includes(o.dish))completedDishes.push(o.dish);
@@ -854,7 +860,18 @@ function startCk(id){
       if(r.m===null||r.m===s.mt||(s.cw!=='炒锅')){match=r;break;}
     }
   }
-  if(!match){toast('🤔','食材/炊具不匹配！');return;}
+  if(!match){
+    // 食材不匹配也能出菜（黑暗料理，仅25%收益）
+    const badName='乱炖'+s.ig.map(i=>ALL_E[i]||i).slice(0,3).join('');
+    s.cutState='worst';s.st='active';s.dish=badName;
+    const fakeT=s.cw==='蒸锅'?18:(s.cw==='煎锅'?12:15);
+    s.tot=fakeT;s.rem=fakeT;
+    addLog('🤮',`灶${s.id}食材不匹配！做出「${badName}」`);
+    selStove=null;
+    const start=Date.now();
+    s.tid=setInterval(()=>{if(!session){clearInterval(s.tid);return;}s.rem=Math.max(0,fakeT-(Date.now()-start)/1000);if(s.rem<=0){s.rem=0;s.st='done';clearInterval(s.tid);selStove=null;}renderStoves();},200);
+    renderStoves();return;
+  }
   // 切菜状态：比较实际刀数vs需要刀数
   let cutState='none';
   const needCut=s.ig.filter(ig=>CUT_ITEMS[ig]);
@@ -881,11 +898,17 @@ function svSt(id){
   addLog('🍽️',`灶${s.id}「${dishName}」出锅`);
   sndCoin();
   if(!served.includes(dishName))served.push(dishName);
-  orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting'){o.st='cooking';o.cutState=s.cutState;}});
+  if(s.cutState==='worst'){
+    // 黑暗料理：匹配第一个等待中的订单
+    for(let i=0;i<orders.length;i++){if(orders[i].st==='waiting'){orders[i].st='cooking';orders[i].cutState='worst';break;}}
+  }else{
+    orders.forEach(o=>{if(o.dish===dishName&&o.st==='waiting'){o.st='cooking';o.cutState=s.cutState;}});
+  }
   s.ig=[];s.cw=null;s.mt=null;s.dish=null;s.st='idle';s.rem=0;s.tot=0;s.cutState='none';delete stoveChopped[s.id];
   selStove=null;
   renderStoves();renderServe();renderOrders();
   orders.forEach(o=>{if(o.dish===dishName&&o.st==='cooking')o.st='done';});
+  if(s.cutState==='worst'){for(let i=0;i<orders.length;i++){if(orders[i].st==='cooking'&&orders[i].cutState==='worst'){orders[i].st='done';break;}}}
   renderOrders();
 }
 
@@ -907,7 +930,17 @@ function coldMix(){
     const need=new Set([...r.i,...r.se]);
     if(cont.length===need.size&&cont.every(i=>need.has(i))){match=r;break;}
   }
-  if(!match){toast('🤔','食材不匹配任何凉拌菜！');return;}
+  if(!match){
+    // 食材不匹配也能出凉拌（黑暗料理，仅25%收益）
+    const badName='黑暗凉拌'+coldBowl.ig.map(i=>ALL_E[i]||i).slice(0,3).join('');
+    addLog('🤮','食材不匹配！做出「'+badName+'」');
+    served.push(badName);
+    for(let i=0;i<orders.length;i++){if(orders[i].st==='waiting'){orders[i].st='cooking';orders[i].cutState='worst';break;}}
+    coldBowl.ig=[];coldBowl.sel=false;coldChopped={};renderBowl();renderServe();renderOrders();
+    orders.forEach(o=>{if(o.st==='cooking'&&o.cutState==='worst')o.st='done';});
+    renderOrders();
+    return;
+  }
   // 切菜检测凉拌版：比较实际刀数
   let cutState='none';
   const needCut=coldBowl.ig.filter(ig=>CUT_ITEMS[ig]);
