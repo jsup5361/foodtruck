@@ -888,7 +888,7 @@ function doReset(){
   const e=_resetEl();if(!e)return;
   e.classList.remove('act');
   try{localStorage.removeItem('foodtruck');}catch(e){}
-  totalDays=0;totalRevenue=0;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
+  totalDays=0;totalRevenue=1000;totalCompleted=0;day=1;completedDishes=[];unlockedAchv={};stock={};
   farmInventory={};farmPlots=Array(25).fill(null).map(()=>({crop:null,plantedAt:null,growTime:0}));farmSeeds={'白萝卜':5};unlockedPlots=6;ingredientUses={};farmUses={};cutBoard={name:null,need:0,done:0};stoveChopped={};
   upMoney();updateDay();renderOrders();renderServe();renderStoves();renderAchv();renderIG();
   toast('🗑️','存档已重置');
